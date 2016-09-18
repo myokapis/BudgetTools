@@ -1,0 +1,24 @@
+﻿@model List<IEnumerable<string>>
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>FileData</title>
+</head>
+<body>
+    <div>
+      @foreach (IEnumerable<string> data in Model)
+      {
+        foreach(string item in data)
+        {
+          <div>@Html.Raw(item)</div>
+        }
+      }
+    </div>
+</body>
+</html>

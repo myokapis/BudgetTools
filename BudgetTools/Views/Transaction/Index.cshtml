@@ -1,0 +1,84 @@
+﻿@model IEnumerable<BudgetTools.Models.DomainModels.Transaction>
+@{
+    ViewBag.Title = "Index";
+}
+
+  <link href="@Url.Content("~/Content/Transactions.css")" rel="stylesheet" type="text/css" />
+
+<div class="transaction-container">
+  <input hidden="hidden" type="hidden" id="current_record" value="0" />
+  <div class="transaction-grid">
+    <table id="transaction_table" class="transaction-outer-table">
+      <thead>
+        <tr class="transaction-head-row transaction-heading">
+          <td class="transaction-left tcol-head1">Date</td>
+          <td class="transaction-left tcol2">Check #</td>
+          <td class="transaction-left tcol3">Description</td>
+          <td class="transaction-right tcol4">Amount</td>
+          <td class="tcol5"></td>
+        </tr>
+      </thead>
+      <tbody style="padding: 0px; margin: 0px; height: 100%; width: 100%; vertical-align: top; box-sizing: border-box;">
+        <tr style=" padding 0px; margin 0px; height 100%; width 100%; vertical-align top; box-sizing border-box;"><td colspan="5" style="padding: 0px; margin: 0px; height: 100%; width: 100%; vertical-align: top; box-sizing: border-box;">
+            <div class="transaction-inner-wrapper">
+              <table id="transaction_table_inner" class="transaction-inner-table">
+                <tbody>
+                  @foreach (var row in Model)
+                  {
+                    <tr id="tr_@row.TransactionId" title="tr_@row.TransactionId" class="@Html.CssClass(row.IsMapped, "transaction-row", "transaction-row-mapped")" onclick="handleRowClick(this);">
+                      <td id="tr_date_@row.TransactionId" class="transaction-left tcol1">@Html.DisplayFor(model => row.TransactionDate)</td>
+                      <td id="tr_check_@row.TransactionId" class="transaction-left tcol2">@Html.DisplayFor(model => row.CheckNo)</td>
+                      <td id="tr_desc_@row.TransactionId" class="transaction-left tcol3">@Html.DisplayFor(model => row.TransactionDesc)</td>
+                      <td id="tr_amount_@row.TransactionId" class="transaction-right tcol4" title="@Html.DisplayFor(model => row.TransactionNo)">@Html.DisplayFor(model => row.Amount)</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="transaction-editor">
+    <input id="TotalAmount" name="TotalAmount" type="hidden" value="0" />
+    <div class="transaction-edit-group">
+      <div>Transaction Type</div>
+      <div>@Html.DropDownList("TransactionType", (IEnumerable<SelectListItem>)ViewData["TransactionType"], new { @class = "transaction-edit-element" })</div>
+    </div>
+    <div class="transaction-edit-group">
+      <div>Recipient</div>
+      <div>@Html.TextBox("Recipient", "", new { @class = "transaction-edit-element" })</div>
+    </div>
+    <div class="transaction-edit-group">
+      <div>Notes</div>
+      <div>@Html.TextArea("Notes", new { @class = "transaction-edit-element" })</div>
+    </div>
+    <div class="transaction-edit-group">
+      <div><div class="budget-line">Budget Line</div><div class="budget-amount">Amount</div></div>
+      <div>
+        <div class="budget-line">@Html.DropDownList("BudgetLine1", (IEnumerable<SelectListItem>)ViewData["BudgetLine"], new { @class = "transaction-edit-dd" })</div>
+        <div class="budget-amount">@Html.TextBox("Amount1", "", "{0:C}", new { @class = "transaction-edit-input" })</div>
+      </div>
+      <div>
+        <div class="budget-line">@Html.DropDownList("BudgetLine2", (IEnumerable<SelectListItem>)ViewData["BudgetLine"], new { @class = "transaction-edit-dd" })</div>
+        <div class="budget-amount">@Html.TextBox("Amount2", "", "{0:C}", new { @class = "transaction-edit-input" })</div>
+      </div>
+      <div>
+        <div class="budget-line">@Html.DropDownList("BudgetLine3", (IEnumerable<SelectListItem>)ViewData["BudgetLine"], new { @class = "transaction-edit-dd" })</div>
+        <div class="budget-amount">@Html.TextBox("Amount3", "", "{0:C}", new { @class = "transaction-edit-input" })</div>
+      </div>
+    </div>
+    <div class="transaction-button-group">
+      <input type="button" id="transaction_prev" class="transaction-button" title="Previous" value="Prev" onclick="handlePrevClick();" disabled="disabled" />
+      <div class="transaction-button">&nbsp</div>
+      <input type="button" id="transaction_next" class="transaction-button" title="Next" value="Next" onclick="handleNextClick()" @Html.Disabled((bool)(Model.Count() < 2)) />
+      <div class="transaction-button">&nbsp;</div>
+      <input type="button" id="transaction_save" class="transaction-button" title="Save" value="Save" onclick="handleSaveClick();" />
+    </div>
+  </div>
+</div>
+
+@section local_scripts{
+  @Scripts.Render("~/bundles/transactions")
+}

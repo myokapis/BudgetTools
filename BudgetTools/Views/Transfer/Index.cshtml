@@ -1,0 +1,8 @@
+﻿@using (Html.BeginForm())
+{
+  <div id="selectBankAccount">
+    Bank Account:
+    @Html.DropDownList("BankAccountId", (IEnumerable<SelectListItem>)ViewData["BankAccounts"])
+  </div>
+}
+

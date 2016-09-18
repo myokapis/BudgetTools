@@ -1,0 +1,70 @@
+﻿@model IEnumerable<BudgetTools.Models.DomainModels.PeriodBalance>
+@{
+    ViewBag.Title = "Balances";
+    Layout = "~/Views/Shared/_AppLayout.cshtml";
+    
+    var total = (
+                from m in Model
+                group m by m.PeriodId into g
+                select new
+                {
+                  PreviousBalance = g.Sum(item => item.PreviousBalance),
+                  Balance = g.Sum(item => item.Balance),
+                  ProjectedBalance = g.Sum(item => item.ProjectedBalance)
+                }).FirstOrDefault();
+
+    var bankAccounts = Model.Select(m => new
+                             {
+                               BankAccountId = m.BankAccount.BankAccountId,
+                               BankAccountName = m.BankAccount.BankAccountName
+                             })
+                            .Distinct()
+                            .OrderBy(m => m.BankAccountId);
+}
+
+@Scripts.Render("~/bundles/balance")
+<link href="@Url.Content("~/Content/Balance.css")" rel="stylesheet" type="text/css" />
+
+<table id="balance_table" class="balance-outer-table">
+  <thead>
+    <tr class="balance-head-row balance-heading">
+      <td class="balance-left tcol-head1">Bank Account</td>
+      <td class="balance-left tcol2">Previous Balance</td>
+      <td class="balance-right tcol2">Balance</td>
+      <td class="balance-right tcol2">Projected Balance</td>
+      <td class="balance-right tcol3"></td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td colspan="4">
+        <div class="balance-inner-wrapper">
+          <table id="balance_table_totals" style="width: 100%; height: 100%;">
+            <tbody>
+              <tr id="tr_totals" class="balance-summary-row">
+                <td id="tr_bankaccount_totals" class="balance-left tcol1">All Accounts</td>
+                <td id="tr_previousbalance_totals" class="balance-right tcol2">@Html.FormatValue(total.PreviousBalance, "{0:C}")</td>
+                <td id="tr_balance_totals" class="balance-right tcol2">@Html.FormatValue(total.Balance, "{0:C}")</td>
+                <td id="tr_projectedbalance_totals" class="balance-right tcol2">@Html.FormatValue(total.ProjectedBalance, "{0:C}")</td>
+                <td class="balance-right tcol3"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          @foreach (var row in bankAccounts)
+          {
+            <table id="balance_table_@row.BankAccountName" style="width: 100%; height: 100%;">
+              <tbody>
+                @{
+                  Html.RenderPartial("_BalanceByAccount",
+                    Model.Where(w => w.BankAccountId == row.BankAccountId));
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+

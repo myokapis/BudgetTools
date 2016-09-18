@@ -1,0 +1,76 @@
+﻿@model IEnumerable<BudgetTools.Models.ViewModels.AllocationViewModel>
+@{
+  var categories = Model.GroupBy(g => g.BudgetCategoryName)
+    .Select(s => new { BudgetCategoryName = s.Key });
+
+  var total = (from m in Model
+               group m by m.PeriodId into g
+               select new
+               {
+                 PlannedAmount = g.Sum(item => item.PlannedAmount),
+                 AllocatedAmount = g.Sum(item => item.AllocatedAmount),
+                 AccruedAmount = g.Sum(item => item.AccruedAmount),
+                 ActualAmount = g.Sum(item => item.ActualAmount),
+                 RemainingAmount = g.Sum(item => item.RemainingAmount),
+                 AccruedBalance = g.Sum(item => item.AccruedBalance)
+               }
+              ).FirstOrDefault();
+}
+
+@Scripts.Render("~/bundles/budget")
+<link href="@Url.Content("~/Content/Budget.css")" rel="stylesheet" type="text/css" />
+
+@using (Html.BeginForm())
+{
+<table id="budget_table" class="budget-outer-table">
+  <thead>
+    <tr class="budget-head-row budget-heading">
+      <td class="budget-left tcol-head1">Budget Line</td>
+      <td class="budget-right tcol2">Planned</td>
+      <td class="budget-right tcol3">Allocated</td>
+      <td class="budget-right tcol4">Accrued</td>
+      <td class="budget-right tcol5">Spent</td>
+      <td class="budget-right tcol6">Remaining</td>
+      <td class="budget-right tcol7">Balance</td>
+      <td class="budget-left tcol8">
+        Bank Account:
+        @Html.DropDownList("BankAccountId", (IEnumerable<SelectListItem>)ViewData["BankAccounts"], new { @class = "budget-edit-element", onchange = "this.form.submit();" })
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td colspan="8">
+        <div class="budget-inner-wrapper">
+          <table id="budget_table_totals" style="width: 100%; height: 100%;">
+            <tbody>
+              <tr id="tr_totals" class="budget-summary-row">
+                <td id="tr_name_totals" class="budget-left tcol1">Total</td>
+                <td id="tr_planned_totals" class="budget-right tcol2">@Html.FormatValue(total.PlannedAmount, "{0:C}")</td>
+                <td id="tr_allocated_totals" class="budget-right tcol3">@Html.FormatValue(total.AllocatedAmount, "{0:C}")</td>
+                <td id="tr_accrued_totals" class="budget-right tcol4">@Html.FormatValue(total.AccruedAmount, "{0:C}")</td>
+                <td id="tr_actual_totals" class="budget-right tcol5">@Html.FormatValue(total.ActualAmount, "{0:C}")</td>
+                <td id="tr_balance_totals" class="budget-right tcol6">@Html.FormatValue(total.RemainingAmount, "{0:C}")</td>
+                <td id="tr_balance_totals" class="budget-right tcol7">@Html.FormatValue(total.AccruedBalance, "{0:C}")</td>
+                <td class="budget-right tcol8"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          @foreach (var row in categories.OrderBy(o => o.BudgetCategoryName))
+          {
+            <table id="budget_table_@row.BudgetCategoryName" style="width: 100%; height: 100%;">
+              <tbody>
+                @{
+                  Html.RenderPartial("_BudgetCategory",
+                    Model.Where(w => w.BudgetCategoryName == row.BudgetCategoryName));
+                  }
+              </tbody>
+            </table>
+          }
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+}

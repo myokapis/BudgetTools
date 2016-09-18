@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@ViewBag.Title</title>
+  @Styles.Render("~/Content/css")
+  @Scripts.Render("~/bundles/modernizr")
+  <link href="@Url.Content("~/Content/AppLayout.css")" rel="stylesheet" type="text/css" />
+  <script type="text/javascript">
+    function buildUrl(path) {
+      var parts = ['@Url.Content("~")', path];
+      return parts.join('/');
+    }
+  </script>
+</head>
+<body>
+  <div class="nav-button-container">
+    @Html.ActionButton("Import", "Transaction", "SelectFile", new { @class="nav-button" })
+    @Html.ActionButton("Transactions", "Transaction", "Index", new { @class = "nav-button" })
+    @Html.ActionButton("Budget", "Budget", "Index", new { @class = "nav-button" })
+    @Html.ActionButton("Balances", "Budget", "Balances", new { @class = "nav-button" })
+    @Html.ActionButton("Categories", "Transaction", "Index", new { @class = "nav-button" })
+  </div>
+  <div class="body-div">
+    @RenderBody()
+  </div>
+
+  @Scripts.Render("~/bundles/jquery")
+  @Scripts.Render("~/bundles/bootstrap")
+  @RenderSection("scripts", required: false)
+  @RenderSection("local_scripts", required: false)
+</body>
+</html>
+

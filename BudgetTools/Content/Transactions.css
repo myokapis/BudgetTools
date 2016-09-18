@@ -1,0 +1,183 @@
+﻿body{
+  background-color: #FFD45C;
+}
+
+.transaction-container{
+  display: block;
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.transaction-grid{
+  width: 74%;
+  height: 472px;
+  padding: 0px 12px 0px 12px;
+  box-sizing: border-box;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.transaction-editor{
+  width: 25%;
+  height: 500px;
+  min-width: 150px;
+  padding: 0px 0px 0px 22px;
+  border: solid 1px black;
+  box-sizing: border-box;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.transaction-inner-wrapper{
+  height: 100%;
+  width: 100%;
+  overflow-y: scroll;
+  vertical-align: top;
+  box-sizing: border-box;
+  max-height: 472px;
+  /*border: solid 1px yellow;*/
+}
+
+.transaction-inner-table{
+  height: 100%;
+  width: 100%;
+  max-height: 300px;
+  /*border: solid 2px purple;*/
+}
+
+.transaction-outer-table{
+  width: 100%;
+  height: 100%;
+  max-height: 472px;
+  border: solid 1px black;
+}
+
+.transaction-heading{
+  font-weight: bold;
+}
+
+.transaction-head-row{
+  border: 1px solid black;
+  width: 100%;
+  height: 26px;
+  background-color: #7487F2;
+}
+
+.transaction-row{
+  border: 1px solid black;
+  width: 100%;
+  height: 22px;
+  cursor: pointer;
+  color: blue;
+  background-color: #ADC7C7;
+  font-style: normal;
+}
+
+.transaction-row-mapped{
+  background-color: #ADC7C7;
+  font-style: italic;
+  color: black;
+}
+
+.transaction-row-selected{
+  background-color: #F5520C;
+}
+
+.transaction-left{
+  text-align: left;
+  padding: 4px 4px 4px 4px;
+  border: 1px solid black;
+}
+
+.transaction-right{
+  text-align: right;
+  padding: 4px 4px 4px 4px;
+  border: 1px solid black;
+}
+
+.tcol-head1{
+  min-width: 88px;
+  max-width: 88px;
+  width: 88px;
+}
+
+.tcol1{
+  min-width: 86px;
+  max-width: 86px;
+  width: 86px;
+}
+
+.tcol2{
+  min-width: 74px;
+  max-width: 74px;
+  width: 74px;
+}
+
+.tcol3{
+  /*min-width: 59px;
+  max-width: 59px;
+  width: 59px;*/
+}
+
+.tcol4{
+  min-width: 69px;
+  max-width: 69px;
+  width: 69px;
+}
+
+.tcol5{
+  min-width: 19px;
+  max-width: 19px;
+  width: 19px;
+}
+
+.transaction-edit-group {
+  clear: both;
+  padding-bottom: 8px;
+}
+
+.transaction-edit-element {
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  max-height: 250px;
+}
+
+.transaction-edit-dd {
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+  max-height: 160px;
+}
+
+.transaction-edit-input {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  max-height: 80px;
+  margin-left: 10px;
+  text-align: right;
+}
+
+.transaction-button-group {
+  padding-top: 48px;
+}
+
+.transaction-button{
+  width: 48px;
+  min-width: 48px;
+  display: inline-block;
+}
+
+.budget-line{
+  display: inline-block;
+  width: 160px;
+}
+
+.budget-amount{
+  display: inline-block;
+  width: 80px;
+}

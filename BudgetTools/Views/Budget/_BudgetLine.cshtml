@@ -1,0 +1,44 @@
+﻿@model IEnumerable<BudgetTools.Models.ViewModels.AllocationViewModel>
+
+@{  int selectedBankAccountId = (int)ViewData["SelectedBankAccountId"];}
+
+@foreach (var row in Model)
+{
+  <tr id="tr_@row.BudgetLineId" class="budget-row">
+    <td id="td_name_@row.BudgetLineId" class="budget-left tcol1">@Html.DisplayFor(model => row.BudgetLineName)</td>
+    <td id="td_planned_@row.BudgetLineId" class="budget-right tcol2">
+      @if(selectedBankAccountId == 0)
+      {
+        @Html.DisplayFor(model => row.PlannedAmount, "{0:C}");
+      }
+      else
+      {
+        @Html.TextBox("planned_" + @row.BudgetLineId.ToString(), row.PlannedAmount, "{0:C}", new { @class = "budget-textbox", onchange = "handlePlannedClick(this);" })
+      }
+    </td>
+    <td id="td_allocated_@row.BudgetLineId" class="budget-right tcol3">
+      @if (selectedBankAccountId == 0)
+      {
+        @Html.DisplayFor(model => row.AllocatedAmount, "{0:C}");
+      }
+      else
+      {
+        @Html.TextBox("allocated_" + row.BudgetLineId.ToString(), row.AllocatedAmount, "{0:C}", new { @class = "budget-textbox", onchange = "handleAllocatedClick(this);" })
+      }
+    </td>
+    <td id="td_accrued_@row.BudgetLineId" class="budget-right tcol4">
+    @if(row.IsAccrued == true && selectedBankAccountId != 0)
+    {
+      @Html.TextBox("accrued_" + row.BudgetLineId.ToString(), row.AccruedAmount, "{0:C}", new { @class = "budget-textbox", onchange = "handleAccruedClick(this)" });
+    }
+    else
+    {
+      @Html.DisplayFor(model => row.AccruedAmount, "{0:C}");
+    }
+    </td>
+    <td id="td_actual_@row.BudgetLineId" class="budget-right tcol5">@Html.DisplayFor(model => row.ActualAmount)</td>
+    <td id="td_remaining_@row.BudgetLineId" class="budget-right tcol6">@Html.DisplayFor(model => row.RemainingAmount)</td>
+    <td id="td_balance_@row.BudgetLineId" class="budget-right tcol7">@Html.DisplayFor(model => row.AccruedBalance)</td>
+    <td class="budget-right tcol8"></td>
+  </tr>
+}

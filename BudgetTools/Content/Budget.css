@@ -1,0 +1,183 @@
+﻿.budget-grid{
+  float: left;
+  width: 78%;
+  padding: 0px 12px 0px 12px;
+}
+
+.budget-editor{
+  float: left;
+  width: 22%;
+  min-width: 150px;
+  padding: 0px 0px 0px 22px;
+}
+
+.budget-outer-table{
+  width: 99%;
+  border: 1px solid black;
+}
+
+.budget-heading{
+  font-weight: bold;
+  color: black;
+  font-family: Tahoma;
+  font-size: 14px;
+}
+
+.budget-head-row{
+  border: 1px solid black;
+  width: 100%;
+  background-color: #78c8e1;
+}
+
+.budget-row{
+  border: 1px solid black;
+  width: 100%;
+  cursor: default;
+  background-color: #b4dcdc;
+  font-style: normal;
+  color: black;
+  font-family: Tahoma;
+  font-size: 14px;
+}
+
+.budget-summary-row{
+  border: 1px solid black;
+  width: 100%;
+  cursor: default;
+  background-color: #ffdcdc;
+  font-style: normal;
+  font-weight: 600;
+  padding-right: 6px;
+  color: black;
+  font-family: Tahoma;
+  font-size: 14px;
+}
+
+.budget-row-mapped{
+  background-color: #b4dcdc;
+  font-style: italic;
+}
+
+.budget-row-selected{
+  background-color: #F87217;
+}
+
+.budget-left{
+  text-align: left;
+  padding: 4px 4px 4px 4px;
+  border: 1px solid black;
+}
+
+.budget-right{
+  text-align: right;
+  padding: 4px 4px 4px 4px;
+  border: 1px solid black;
+}
+
+.tcol-head1{
+  min-width: 282px;
+  max-width: 282px;
+  width: 282px;
+}
+
+.tcol1{
+  min-width: 280px;
+  max-width: 280px;
+  width: 280px;
+}
+
+.tcol2{
+  min-width: 115px;
+  max-width: 115px;
+  width: 115px;
+}
+
+.tcol3{
+  min-width: 115px;
+  max-width: 115px;
+  width: 115px;
+}
+
+.tcol4{
+  min-width: 115px;
+  max-width: 115px;
+  width: 115px;
+}
+
+.tcol5{
+  min-width: 115px;
+  max-width: 115px;
+  width: 115px;
+}
+
+.tcol6{
+  min-width: 115px;
+  max-width: 115px;
+  width: 115px;
+}
+
+.tcol7{
+  min-width: 115px;
+  max-width: 115px;
+  width: 115px;
+}
+
+.tcol8{
+
+}
+
+.budget-inner-wrapper{
+  max-height: 436px;
+  overflow-y: scroll;
+}
+
+.budget-edit-group {
+  clear: both;
+  padding-bottom: 8px;
+}
+
+.budget-edit-element {
+  width: 240px;
+  min-width: 240px;
+  max-width: 240px;
+  max-height: 240px;
+}
+
+.budget-button-group {
+  clear: both;
+  padding-top: 48px;
+}
+
+.budget-button{
+  width: 48px;
+  min-width: 48px;
+  float: left;
+}
+
+.budget-textbox{
+  width: 98%;
+  height: 98%;
+  background-color: transparent;
+  text-align: right;
+  /*background: white;*/
+  border: 1px double #DDD;
+  border-radius: 3px;
+  box-shadow: 0 0 5px #333;
+  /*color: #666;*/
+  /*float: left;*/
+  padding: 2px 2px 2px 2px;
+  /*width: 165px;*/
+  outline: none;
+}
+
+.budget-textbox-selected{
+  background-color: #b6dddd;
+  box-shadow: inset;
+}
+
+.budget-edit-element {
+  width: 175px;
+  min-width: 175px;
+  max-width: 175px;
+  max-height: 175px;
+}
