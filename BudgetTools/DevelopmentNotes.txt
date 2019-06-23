@@ -1,0 +1,52 @@
+﻿Presentation Layer = Presenters
+Application Layer = Controllers
+Business Layer = Domain
+Data Access Layer = Data Access
+
+
+TODO:
+decide when a model is a view model and when it is a different kind of model
+  - use two kinds of models
+  - one kind moves data from business to view
+  - the other kind moves data from view to business
+  - decide if they need to be segregated by function or organized another way
+  - if segregated what would they be called
+change the save methods to update when appropriate
+  - introduce a sparse data object
+  - box the underlying data type so that all values can be flagged as not present
+  - use a generic or an attribute to compose these data transfer types
+  - expose a method to setting a passed in instance of the underlying class
+convert to javascript classes
+add IsClosed to page info and make budget presenter respect it
+add filter or some kind of intercept on controllers to ensure PageScope gets set
+change all data access to return <T>
+modify template class to exclude section lines that are blank
+modify template class to have an interface for testing
+modify template class to cache templates and make them available through an ITemplateProvider
+cleanup unused references
+only show periods for which data has been created /OR/ ensure data is created for all active periods in next twelve months at app start
+define what view model and domain model are and reorganize the app models
+add localization to date, time, number, and currency formatting
+fix template copying
+maybe redo templates with my own code and implement a unique object id based on the content and expose selected section, etc.
+maybe allow template caching of individual master sections
+when adding caching be sure to define an interface and require the user to pass in the cache object that they want to use
+
+
+TEMPLATES
+Template = section
+Sections - dictionary containing references to sections by name
+Variables - dictionary containing location of variables by name
+List - contains text, placeholders for variables and sections
+Constructors
+  file path
+  streamreader
+  string
+
+Writer - initializes a new string builder for a specified section or default section if no section is specified
+append section
+deselectSection
+getContent - option to append current section if it is dirty walking up the tree to the top
+setField
+setSection
+selectSection

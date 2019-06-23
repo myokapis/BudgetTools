@@ -1,183 +1,143 @@
-﻿body{
-  background-color: #FFD45C;
+﻿
+.content-section-div {
+    height: calc(90% - 12px);
+    overflow: hidden;
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-evenly;
+    padding: 12px;
+    background-color: #A60000;
 }
 
-.transaction-container{
-  display: block;
-  overflow: auto;
-  height: 100%;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
+.table-section-div {
+    height: 100%;
+    overflow: hidden;
+    flex: 4 1 content;
+    margin-right: 16px;
 }
 
-.transaction-grid{
-  width: 74%;
-  height: 472px;
-  padding: 0px 12px 0px 12px;
-  box-sizing: border-box;
-  display: inline-block;
-  vertical-align: top;
+.editor-section-div {
+    flex: 1 1 content;
+    height: calc(100% - 32px);
+    overflow: hidden;
+    background-color: #dddddd;
+    padding: 16px;
+    font-weight: normal;
+    font-size: 14px;
 }
 
-.transaction-editor{
-  width: 25%;
-  height: 500px;
-  min-width: 150px;
-  padding: 0px 0px 0px 22px;
-  border: solid 1px black;
-  box-sizing: border-box;
-  display: inline-block;
-  vertical-align: top;
+.editor-section-div > select, input {
+    display: flex;
+    width: 100%;
 }
 
-.transaction-inner-wrapper{
-  height: 100%;
-  width: 100%;
-  overflow-y: scroll;
-  vertical-align: top;
-  box-sizing: border-box;
-  max-height: 472px;
-  /*border: solid 1px yellow;*/
+.editor-section-div > textarea {
+    display: flex;
+    width: 100%;
+    resize: vertical;
 }
 
-.transaction-inner-table{
-  height: 100%;
-  width: 100%;
-  max-height: 300px;
-  /*border: solid 2px purple;*/
+.tableheader-div {
+    background: #ddd;
+    padding-left: 20px;
+    display: block;
 }
 
-.transaction-outer-table{
-  width: 100%;
-  height: 100%;
-  max-height: 472px;
-  border: solid 1px black;
+.tableheader-div div {
+    padding: 4px 0px;
+    font-weight: bold;
+    font-size: 14px;
+    text-align: left;
+    float: left;
+    display: block;
+    border-bottom: solid 1px #777777;
 }
 
-.transaction-heading{
-  font-weight: bold;
+.table-div {
+    overflow-y: scroll;
+    overflow-x: hidden;
+    height: calc(100% - 26px);
+    background-color: #dddddd;
+    padding-left: 16px;
+    clear: both;
 }
 
-.transaction-head-row{
-  border: 1px solid black;
-  width: 100%;
-  height: 26px;
-  background-color: #7487F2;
+#transactions {
+    overflow: hidden;
 }
 
-.transaction-row{
-  border: 1px solid black;
-  width: 100%;
-  height: 22px;
-  cursor: pointer;
-  color: blue;
-  background-color: #ADC7C7;
-  font-style: normal;
+#transactions td {
+    padding: 4px 4px;
+    min-width: 80px;
+    border-bottom: 1px solid #eeeeee;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    text-align: left;
+    margin: 0;
+    white-space: nowrap;
+    font-size: 12px;
+    background-color: #dddddd;
 }
 
-.transaction-row-mapped{
-  background-color: #ADC7C7;
-  font-style: italic;
-  color: black;
+.transaction-row {
+    cursor: default;
 }
 
-.transaction-row-selected{
-  background-color: #F5520C;
+.transaction-row-mapped {
+    color: #2152aa;
+    cursor: default;
 }
 
-.transaction-left{
-  text-align: left;
-  padding: 4px 4px 4px 4px;
-  border: 1px solid black;
+.transaction-row-focus {
+    background-color: #aaaaaa !important;
 }
 
-.transaction-right{
-  text-align: right;
-  padding: 4px 4px 4px 4px;
-  border: 1px solid black;
+
+
+.editor-table {
+    margin-top: 22px;
+    width: 100%;
 }
 
-.tcol-head1{
-  min-width: 88px;
-  max-width: 88px;
-  width: 88px;
+.editor-table th {
+    padding-top: 12px;
+    font-weight: bold;
 }
 
-.tcol1{
-  min-width: 86px;
-  max-width: 86px;
-  width: 86px;
+.editor-table td:first-of-type, th:first-of-type {
+    text-align: left;
+    width: calc(100% - 75px);
 }
 
-.tcol2{
-  min-width: 74px;
-  max-width: 74px;
-  width: 74px;
+.editor-table td:nth-of-type(2), th:nth-of-type(2) {
+    text-align: right;
+    width: 75px;
 }
 
-.tcol3{
-  /*min-width: 59px;
-  max-width: 59px;
-  width: 59px;*/
+.editor-table input {
+    width: 100%;
+    text-align: right;
 }
 
-.tcol4{
-  min-width: 69px;
-  max-width: 69px;
-  width: 69px;
+.editor-table select {
+    width: 100%;
 }
 
-.tcol5{
-  min-width: 19px;
-  max-width: 19px;
-  width: 19px;
+.label {
+    padding-top: 16px;
+    font-weight: bold;
+    display: block;
 }
 
-.transaction-edit-group {
-  clear: both;
-  padding-bottom: 8px;
+.editor-button-container {
+    display: flex;
+    padding-left: 8px;
+    padding-top: 8px;
 }
 
-.transaction-edit-element {
-  width: 250px;
-  min-width: 250px;
-  max-width: 250px;
-  max-height: 250px;
-}
+.editor-button-container button {
 
-.transaction-edit-dd {
-  width: 160px;
-  min-width: 160px;
-  max-width: 160px;
-  max-height: 160px;
-}
-
-.transaction-edit-input {
-  width: 80px;
-  min-width: 80px;
-  max-width: 80px;
-  max-height: 80px;
-  margin-left: 10px;
-  text-align: right;
-}
-
-.transaction-button-group {
-  padding-top: 48px;
-}
-
-.transaction-button{
-  width: 48px;
-  min-width: 48px;
-  display: inline-block;
-}
-
-.budget-line{
-  display: inline-block;
-  width: 160px;
-}
-
-.budget-amount{
-  display: inline-block;
-  width: 80px;
 }

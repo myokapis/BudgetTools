@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
+﻿using System.Web.Mvc;
 using System.Web.Routing;
 
 namespace BudgetTools
@@ -15,8 +11,10 @@ namespace BudgetTools
 
             routes.MapRoute(
                 name: "Default",
-                url: "{controller}/{action}/{id}",
-                defaults: new { controller = "Budget", action = "Index", id = UrlParameter.Optional }
+                url: "Angular/{controller}/{action}/{id}",
+                namespaces: new string[] { "BudgetTools.Controllers.Angular" },
+                // TODO: reset this to the transaction page when done developing
+                defaults: new { controller = "Import", action = "Index", id = UrlParameter.Optional }
             );
         }
     }

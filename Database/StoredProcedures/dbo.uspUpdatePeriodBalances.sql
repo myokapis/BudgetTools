@@ -1,4 +1,4 @@
-alter PROCEDURE dbo.uspUpdatePeriodBalances
+ALTER PROCEDURE dbo.uspUpdatePeriodBalances
   @PeriodID                           int,
   @ClosePeriod                        bit = 0
 AS

@@ -15,3 +15,5 @@ CREATE TABLE dbo.StageTransactions
 
 CREATE CLUSTERED INDEX ixcl_dbo_StageTransactions ON dbo.StageTransactions(BankAccountId, TransactionNo);
 GO
+
+sp_rename 'dbo.StageTransactions', 'StagedTransactions';

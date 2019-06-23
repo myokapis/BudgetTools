@@ -1,29 +1,36 @@
-CREATE PROCEDURE dbo.uspImportTransactions
-AS
+if object_id('dbo.uspImportTransactions', 'P') is null
+    exec('create procedure dbo.uspImportTransactions as select 1;');
+go
 
-SET NOCOUNT ON;
---SET XACT_ABORT ON;
+alter procedure dbo.uspImportTransactions
+    @BankAccountId int
+as
 
-BEGIN TRY
+set nocount on;
 
-  BEGIN TRANSACTION;
+begin try
 
-  INSERT INTO dbo.Transactions(BankAccountId, TransactionNo, TransactionDate,
-    TransactionDesc, CheckNo, Amount, TransactionTypeCode, IsMapped)
-  SELECT st.BankAccountId, st.TransactionNo, st.TransactionDate,
-    st.TransactionDesc, st.CheckNo, st.Amount, 'S' AS TransactionTypeCode, 0 AS IsMapped
-  FROM dbo.StageTransactions st
-    LEFT JOIN dbo.Transactions t ON st.BankAccountId = t.BankAccountId
-      AND st.TransactionNo = t.TransactionNo
-  WHERE t.BankAccountId IS NULL;
+    begin transaction;
 
-  TRUNCATE TABLE dbo.StageTransactions;
+    insert into dbo.Transactions(BankAccountId, TransactionNo, TransactionDate,
+        TransactionDesc, CheckNo, Amount, TransactionTypeCode, IsMapped)
+    select st.BankAccountId, st.TransactionNo, st.TransactionDate,
+        st.TransactionDesc, st.CheckNo, st.Amount, 'S' as TransactionTypeCode, 0 as IsMapped
+    from dbo.StagedTransactions st
+    left join dbo.Transactions t on st.BankAccountId = t.BankAccountId
+        and st.TransactionNo = t.TransactionNo
+    where st.BankAccountId = @BankAccountId
+    and t.BankAccountId IS NULL;
 
-  COMMIT TRANSACTION;
+    delete st
+    from dbo.StagedTransactions st
+    where BankAccountId = @BankAccountId;
 
-END TRY
-BEGIN CATCH
-  IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-  THROW;
-END CATCH
-GO
+    commit transaction;
+
+end try
+begin catch
+    if @@trancount > 0 rollback transaction;
+    throw;
+end catch
+go

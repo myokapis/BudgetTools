@@ -2,7 +2,7 @@
 --       add 'M' period adjustment records
 --       exclude internal transfers from the GUI
 
-CREATE PROCEDURE dbo.CreateInternalTransfer
+ALTER PROCEDURE dbo.CreateInternalTransfer
     @PeriodID                   int,
     @BankAccountID              int,
     @Amount                     money,
@@ -52,6 +52,10 @@ SELECT @BankAccountID,
   'Internal Transfer', -@Amount, 'I', 'Internal Transfer',
   @Note, 1 AS IsMapped;
 
+-- add debit mapped transaction
+INSERT INTO dbo.MappedTransactions(TransactionId, BudgetLineId, Amount)
+SELECT SCOPE_IDENTITY(), @LineFromID, -@Amount;
+
 -- write credit transaction
 INSERT INTO dbo.Transactions(BankAccountId, TransactionNo, TransactionDate,
   TransactionDesc, Amount, TransactionTypeCode, Recipient, Notes, IsMapped)
@@ -61,6 +65,14 @@ SELECT @BankAccountID,
   CONVERT(char(8), GETDATE(), 112),
   'Internal Transfer', @Amount, 'I', 'Internal Transfer',
   @Note, 1 AS IsMapped;
+
+-- add credit mapped transaction
+INSERT INTO dbo.MappedTransactions(TransactionId, BudgetLineId, Amount)
+SELECT SCOPE_IDENTITY(), @LineToID, @Amount;
+
+INSERT INTO dbo.PeriodAdjustments(PeriodID, BankAccountID, BudgetLineID, AdjustmentTypeCode, Amount)
+VALUES(@PeriodID, @BankAccountID, @LineFromID, 'M', -@Amount),
+  (@PeriodID, @BankAccountID, @LineToID, 'M', @Amount);
 
 COMMIT TRANSACTION
 SELECT @ErrorMessage = 'Transfer successful'
