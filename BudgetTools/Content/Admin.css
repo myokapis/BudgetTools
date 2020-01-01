@@ -1,0 +1,155 @@
+﻿.content-section-div {
+    height: calc(93% - 8px);
+    overflow: hidden;
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-evenly;
+    padding: 12px;
+    background-color: #A60000;
+}
+
+.menu-section-div {
+    height: calc(100% - 0px);
+    min-width: 180px;
+    overflow: hidden;
+    margin-right: 16px;
+    padding: 0px 16px;
+    background-color: #dddddd;
+}
+
+.menu-section-div ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.menu-section-div li {
+    padding: 4px 0px 4px 0px;
+}
+
+.menu-section-div ul:hover {
+    color: #551444;
+    cursor: pointer;
+}
+
+.editor-section-div {
+    flex: 1 1 content;
+    height: calc(100% - 32px);
+    overflow: hidden;
+    background-color: #dddddd;
+    padding: 16px;
+    font-weight: normal;
+    font-size: 12px;
+}
+
+#from-to-div {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    height: calc(100% - 4px);
+}
+
+.grid-container {
+    height: 100%;
+    width: 300px;
+    display: block;
+}
+
+.transfer-spacer{
+    width: 20px;
+    display: block;
+}
+
+#from-to-div div select {
+    margin-top: 8px;
+    display: block;
+    width: calc(100% - 16px);
+    font-size: 12px;
+}
+
+.budgetLineTable {
+    overflow-y: auto;
+    height: calc(100% - 60px);
+    width: 100%;
+    margin-top: 8px;
+    display: block;
+    border-collapse: collapse;
+    border-spacing: 0px;
+}
+
+    .budgetLineTable tr {
+        cursor: pointer;
+    }
+
+.tr-selected {
+    background-color: grey;
+}
+
+.budgetLineTable td {
+    overflow: hidden;
+    text-wrap: none;
+    padding-right: 6px;
+}
+
+    .budgetLineTable td:nth-child(1) {
+        width: 200px;
+    }
+
+    .budgetLineTable td:nth-child(2) {
+        text-align: right;
+        width: 80px;
+    }
+
+#from-to-div label {
+    margin-right: 8px;
+}
+
+#actionButtons {
+    margin-top: 20px;
+    display: none;
+}
+
+.grid-label {
+    font-weight: bold;
+    font-size: 14px;
+    display: block;
+}
+
+.amount-container {
+    font-size: 12px;
+    padding-top: 24px;
+}
+
+#amount {
+    font-size: 12px;
+    padding: 1px 4px 1px 4px;
+    text-align: right;
+    width: 60px;
+}
+
+.notes-container {
+    display: block;
+    width: 100%;
+    font-size: 12px;
+    margin-top: 12px;
+}
+
+.notes-container label {
+    display: block;
+    vertical-align: top;
+}
+
+#transferNotes {
+
+}
+
+#transferMessages {
+    display: none;
+    font-weight: normal;
+    font-size: 12px;
+}

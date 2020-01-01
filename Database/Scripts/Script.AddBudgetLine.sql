@@ -1,8 +1,8 @@
-DECLARE @BudgetLineID int = 67;
-DECLARE @BudgetCategoryID int = 1;
-DECLARE @BudgetLineName varchar(255) = 'Judy';
-DECLARE @BankAccountID int = 3;
-DECLARE @IsAccrued bit = 1;
+DECLARE @BudgetLineID int = 75;
+DECLARE @BudgetCategoryID int = 8;
+DECLARE @BudgetLineName varchar(255) = 'Wish List';
+DECLARE @BankAccountID int = 1;
+DECLARE @IsAccrued bit = 0;
 
 BEGIN TRANSACTION
 
@@ -27,3 +27,16 @@ SELECT CONVERT(char(6), GETDATE(), 112), @BudgetLineID, 0.00, 0.00, 0.00, @BankA
 
 -- COMMIT -- ROLLBACK
 
+/*
+
+select *
+from dbo.BudgetLines
+
+select *
+from dbo.BudgetCategories
+
+select *
+from dbo.vwBudgetGroupCategoryLine
+where BudgetCategoryName = 'Giving'
+
+*/

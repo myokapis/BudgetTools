@@ -1,12 +1,12 @@
-﻿using AutoMapper;
-using Ninject.Activation;
-using Ninject.Modules;
-using DAL = BudgetToolsDAL.Models;
-using DM = BudgetTools.Models.DomainModels;
-using VM = BudgetTools.Models.ViewModels;
+﻿//using AutoMapper;
+//using Ninject.Activation;
+//using Ninject.Modules;
+//using DAL = BudgetToolsDAL.Models;
+//using DM = BudgetTools.Models.DomainModels;
+//using VM = BudgetTools.Models.ViewModels;
 
-namespace BudgetTools.AutoMapper
-{
+//namespace BudgetTools.AutoMapper
+//{
 
     //public class AutoMapperModule : NinjectModule
     //{
@@ -59,4 +59,4 @@ namespace BudgetTools.AutoMapper
 
     //}
 
-}
+//}

@@ -1,7 +1,6 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using BudgetTools.Classes;
-using BudgetTools.Models.DomainModels;
+using BudgetTools.Models;
 using BudgetToolsBLL.Services;
 using TemplateEngine;
 
@@ -28,7 +27,7 @@ namespace BudgetTools.Presenters
 
         public string GetTransactionRows()
         {
-            var writer = contentWriter.GetWriter("ROWS", true);
+            var writer = contentWriter.GetWriter("ROWS");
             GetTransactionRows(writer);
             return writer.GetContent();
         }

@@ -1,6 +1,6 @@
 ﻿<!-- @@HEAD@@ -->
 <link rel="stylesheet" href="Content/Transactions.css" />
-<script type="text/javascript" src="Scripts/transactions.js"></script>
+<script type="text/javascript" src="Scripts/App/transactions.js"></script>
 <!-- @@HEAD@@ -->
 
 <!-- @@BODY@@ -->
@@ -10,10 +10,9 @@
         <div class="tableheader-div">
             <div>Date</div>
             <div>Check No</div>
-            <div>Description</div>
             <div style="text-align: right;">Amount</div>
-            <div></div>
-            <br style="clear: left;" />
+            <div>Description</div>
+            <!-- br style="clear: left;" / -->
         </div>
         <div class="table-div">
             <table id="transactions">
@@ -22,8 +21,8 @@
                     <tr data-id="@@TransactionId@@" class="@@Class@@">
                         <td>@@TransactionDate@@</td>
                         <td>@@CheckNo@@</td>
-                        <td>@@TransactionDesc@@</td>
                         <td style="text-align: right;">@@Amount@@</td>
+                        <td>@@TransactionDesc@@</td>
                     </tr>
                     <!-- @@ROW@@ -->
                 </tbody>
@@ -34,7 +33,9 @@
         <!-- @@EDITOR@@ -->
         <input type="hidden" id="transactionId" />
         <div class="label">Transaction Type</div>
-        <select id="transactionType"><!-- @@TRANSACTION_TYPE@@ --><option value="@@VALUE@@" @@SELECTED@@>@@TEXT@@</option><!-- @@TRANSACTION_TYPE@@ --></select>
+        <select id="transactionType">
+            <!-- @@TRANSACTION_TYPE@@ --><option value="@@VALUE@@" @@SELECTED@@>@@TEXT@@</option><!-- @@TRANSACTION_TYPE@@ -->
+        </select>
         <div class="label">Recipient</div>
         <input type="text" id="recipient" />
         <div class="label">Notes</div>
@@ -57,7 +58,9 @@
             <tbody>
                 <!-- @@EDITOR_ROWS@@ -->
                 <tr>
-                    <td><select><!-- @@BUDGET_LINES@@ --><option value="@@VALUE@@" @@SELECTED@@>@@TEXT@@</option><!-- @@BUDGET_LINES@@ --></select></td>
+                    <td><select>
+                        <!-- @@BUDGET_LINES@@ --><option value="@@VALUE@@" @@SELECTED@@>@@TEXT@@</option><!-- @@BUDGET_LINES@@ -->
+                    </select></td>
                     <td><input type="text" value = "@@Amount@@"/></td>
                 </tr>
                 <!-- @@EDITOR_ROWS@@ -->

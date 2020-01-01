@@ -13,9 +13,12 @@ namespace BudgetToolsBLL.Services
     // TODO: decide if a mapper should be required for instantiating the service
     public interface IBudgetService
     {
+        List<T> CloseCurrentPeriod<T>();
         List<T> GetBankAccounts<T>(bool activeOnly = false);
+        List<T> GetBudgetLineBalances<T>(int bankAccountId);
         List<T> GetBudgetLineSet<T>(DateTime? effectiveDate = null);
         List<T> GetPeriodBudget<T>(int BankAccountId, int PeriodId);
+        List<T> GetPeriodBalancesWithSummary<T>(int periodId);
         List<T> GetPeriodBudgetWithSummary<T>(int bankAccountId, int periodId);
         List<T> GetPeriods<T>(bool openOnly = false);
         T GetTransaction<T>(int transactionId);
@@ -24,36 +27,99 @@ namespace BudgetToolsBLL.Services
         void ImportTransactions(int bankAccountId, List<StagedTransaction> stagedTransactions);
         void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount);
+        List<T> SaveTransfer<T>(int bankAccountFromId, int budgetLineFromId,
+            int bankAccountToId, int budgetLineToId, decimal amount, string note);
         void UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
             string notes, List<T> mappedTransactions);
     }
 
     public class BudgetService : IBudgetService
     {
-        protected IBudgetToolsAccessor budgetToolsRepository;
+        protected IBudgetToolsAccessor budgetToolsAccessor;
 
         public BudgetService(IBudgetToolsAccessor budgetToolsRepository)
         {
-            this.budgetToolsRepository = budgetToolsRepository;
+            this.budgetToolsAccessor = budgetToolsRepository;
+        }
+
+        public List<T> CloseCurrentPeriod<T>()
+        {
+            return budgetToolsAccessor.CloseCurrentPeriod<T>();
         }
 
         public List<T> GetBankAccounts<T>(bool activeOnly = false)
         {
-            return this.budgetToolsRepository.GetBankAccounts()
+            return this.budgetToolsAccessor.GetBankAccounts()
                 .Where(a => !activeOnly || a.IsActive)
                 .Select(a => Mapper.Map<T>(a)).ToList();
         }
 
+        public List<T> GetBudgetLineBalances<T>(int bankAccountId)
+        {
+            return budgetToolsAccessor.GetBudgetLineBalances<T>(bankAccountId);
+        }
+
         public List<T> GetBudgetLineSet<T>(DateTime? effectiveDate = null)
         {
-            return this.budgetToolsRepository.GetBudgetLineSet<T>(effectiveDate ?? DateTime.Now);
+            return this.budgetToolsAccessor.GetBudgetLineSet<T>(effectiveDate ?? DateTime.Now);
+        }
+
+        public List<T> GetPeriodBalancesWithSummary<T>(int periodId)
+        {
+            var balances = budgetToolsAccessor.GetPeriodBalances<PeriodBalance>(periodId)
+                .Select(b => new
+                {
+                    b.PeriodId,
+                    b.BankAccountId,
+                    b.BankAccountName,
+                    b.BudgetLineId,
+                    b.BudgetLineName,
+                    b.BudgetCategoryName,
+                    b.PreviousBalance,
+                    b.Balance,
+                    b.ProjectedBalance,
+                    Level = 2
+                });
+
+            var accountTotals = balances.GroupBy(b => b.BankAccountId)
+                .Select(k => new
+                {
+                    k.First().PeriodId,
+                    BankAccountId = k.Key,
+                    k.First().BankAccountName,
+                    BudgetLineId = 0,
+                    BudgetLineName = "",
+                    k.First().BudgetCategoryName,
+                    PreviousBalance = k.Sum(i => i.PreviousBalance),
+                    Balance = k.Sum(i => i.Balance),
+                    ProjectedBalance = k.Sum(i => i.ProjectedBalance),
+                    Level = 1
+                });
+
+            var grandTotal = accountTotals.GroupBy(k => 0)
+                .Select(k => new
+                {
+                    k.First().PeriodId,
+                    BankAccountId = 0,
+                    BankAccountName = "All Accounts",
+                    BudgetLineId = 0,
+                    BudgetLineName = "",
+                    k.First().BudgetCategoryName,
+                    PreviousBalance = k.Sum(i => i.PreviousBalance),
+                    Balance = k.Sum(i => i.Balance),
+                    ProjectedBalance = k.Sum(i => i.ProjectedBalance),
+                    Level = 0
+                });
+
+            return balances.Union(accountTotals).Union(grandTotal)
+                .Select(b => Mapper.Map<T>(b)).ToList();
         }
 
         public List<T> GetPeriodBudget<T>(int bankAccountId, int periodId)
         {
 
             // get the planned and allocated amounts for each budget line
-            return budgetToolsRepository.GetPeriodBudget(bankAccountId, periodId)
+            return budgetToolsAccessor.GetPeriodBudget(bankAccountId, periodId)
                 .Select(d => Mapper.Map<T>(d)).ToList<T>();
 
         }
@@ -61,19 +127,19 @@ namespace BudgetToolsBLL.Services
         public List<T> GetPeriodBudgetWithSummary<T>(int bankAccountId, int periodId)
         {
 
-            var lines = budgetToolsRepository.GetPeriodBudget(bankAccountId, periodId)
+            var lines = budgetToolsAccessor.GetPeriodBudget(bankAccountId, periodId)
                 .Select(l => new
                 {
-                    BudgetLineId = l.BudgetLineId,
-                    BudgetLineName = l.BudgetLineName,
-                    BudgetCategoryName = l.BudgetCategoryName,
-                    PlannedAmount = l.PlannedAmount,
-                    AllocatedAmount = l.AllocatedAmount,
-                    AccruedAmount = l.AccruedAmount,
-                    ActualAmount = l.ActualAmount,
-                    RemainingAmount = l.RemainingAmount,
-                    AccruedBalance = l.AccruedBalance,
-                    IsAccrued = l.IsAccrued,
+                    l.BudgetLineId,
+                    l.BudgetLineName,
+                    l.BudgetCategoryName,
+                    l.PlannedAmount,
+                    l.AllocatedAmount,
+                    l.AccruedAmount,
+                    l.ActualAmount,
+                    l.RemainingAmount,
+                    l.AccruedBalance,
+                    l.IsAccrued,
                     IsDetail = true
                 }).ToList();
 
@@ -100,14 +166,14 @@ namespace BudgetToolsBLL.Services
 
         public List<T> GetPeriods<T>(bool openOnly = false)
         {
-            return this.budgetToolsRepository.GetPeriods()
+            return this.budgetToolsAccessor.GetPeriods()
                 .Where(p => !openOnly || p.IsOpen)
                 .Select(p => Mapper.Map<T>(p)).ToList();
         }
 
         public T GetTransaction<T>(int transactionId)
         {
-            return budgetToolsRepository.GetTransaction<T>(transactionId);
+            return budgetToolsAccessor.GetTransaction<T>(transactionId);
         }
 
         public List<T> GetTransactions<T>(int bankAccountId, int periodId)
@@ -117,13 +183,13 @@ namespace BudgetToolsBLL.Services
             var startDate = new DateTime(year, month, 1);
             var endDate = startDate.AddMonths(1).AddMilliseconds(-3);
 
-            return budgetToolsRepository.GetTransactions<T>(bankAccountId, startDate, endDate);
+            return budgetToolsAccessor.GetTransactions<T>(bankAccountId, startDate, endDate);
         }
 
         public void ImportFile(int bankAccountId, Stream stream)
         {
             var (uploadValidator, stagedTransactions) = ParseFile(bankAccountId, stream);
-            var bankAccount = this.budgetToolsRepository.GetBankAccount(bankAccountId);
+            var bankAccount = this.budgetToolsAccessor.GetBankAccount(bankAccountId);
 
             // ensure file is for the specified bank account
             if(bankAccount.UploadValidator != uploadValidator)
@@ -136,14 +202,21 @@ namespace BudgetToolsBLL.Services
 
         public void ImportTransactions(int bankAccountId, List<StagedTransaction> stagedTransactions)
         {
-            this.budgetToolsRepository.SaveStagedTransactions<StagedTransaction>(bankAccountId, stagedTransactions);
+            this.budgetToolsAccessor.SaveStagedTransactions<StagedTransaction>(bankAccountId, stagedTransactions);
         }
 
         public void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount)
         {
-            this.budgetToolsRepository.UpdateBudgetLine(periodId, budgetLineId, bankAccountId,
+            this.budgetToolsAccessor.UpdateBudgetLine(periodId, budgetLineId, bankAccountId,
                 plannedAmount, allocatedAmount, accruedAmount);
+        }
+
+        public List<T> SaveTransfer<T>(int bankAccountFromId, int budgetLineFromId,
+            int bankAccountToId, int budgetLineToId, decimal amount, string note)
+        {
+            return budgetToolsAccessor.SaveTransfer<T>(bankAccountFromId, budgetLineFromId,
+                bankAccountToId, budgetLineToId, amount, note);
         }
 
         public void UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
@@ -155,7 +228,7 @@ namespace BudgetToolsBLL.Services
             var dups = mappedXacts.GroupBy(x => x.BudgetLineId).Select(g => g.Count()).Where(c => c > 1).ToList();
             if (dups.Count() > 0) throw new ArgumentException("Only one mapped transaction id may be saved for each budget line.");
 
-            this.budgetToolsRepository.UpdateTransaction<T>(transactionId, transactionTypeCode, recipient, notes,
+            this.budgetToolsAccessor.UpdateTransaction<T>(transactionId, transactionTypeCode, recipient, notes,
                 mappedTransactions);
 
         }

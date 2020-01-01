@@ -45,7 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Helpers\Converters.cs" />
+    <Compile Include="Models\PeriodBalance.cs" />
     <Compile Include="Models\MappedTransaction.cs" />
     <Compile Include="Models\PeriodBudgetLine.cs" />
     <Compile Include="Models\StagedTransaction.cs" />

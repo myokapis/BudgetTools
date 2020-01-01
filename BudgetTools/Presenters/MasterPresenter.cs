@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using BudgetToolsBLL.Services;
 using BudgetTools.Classes;
 using TemplateEngine;
@@ -17,6 +16,7 @@ namespace BudgetTools.Presenters
         protected ITemplateCache templateCache;
         protected IWebCache webCache = null;
 
+        // TODO: cache the periods and bank accounts on app start up
         protected void GetSelector(ITemplateWriter writer)
         {
             // get drop down data
@@ -50,6 +50,11 @@ namespace BudgetTools.Presenters
         {
             masterWriter = GetTemplateWriter("Master.tpl");
             masterWriter.Reset();
+
+            // reset all providers
+            head?.Reset();
+            body?.Reset();
+            tail?.Reset();
 
             // setup the master page section providers
             if (head != null) this.masterWriter.RegisterFieldProvider("HEAD", head);

@@ -42,7 +42,7 @@ select a.BudgetLineId, bl.BudgetLineName, bl.BudgetCategoryName,
     a.PlannedAmount, a.AllocatedAmount, a.AccruedAmount,
     isnull(t.Amount, 0.0) as ActualAmount,
     a.PlannedAmount - isnull(t.Amount, 0.0) as RemainingAmount,
-    isnull(pb.Balance, 0.0) as AccruedBalance,
+    isnull(-pb.Balance, 0.0) as AccruedBalance,
     bl.IsAccrued
 from dbo.Allocations a
 inner join dbo.vwBudgetGroupCategoryLine bl on a.BudgetLineId = bl.BudgetLineId

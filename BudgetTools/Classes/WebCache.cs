@@ -5,6 +5,8 @@ using System.Web.Caching;
 using TemplateEngine;
 using BudgetToolsBLL.Services;
 
+// TODO: look at using memory cache and instantiate it as part of app startup
+
 namespace BudgetTools.Classes
 {
 

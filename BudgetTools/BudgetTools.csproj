@@ -136,8 +136,8 @@
       <HintPath>..\packages\Newtonsoft.Json.5.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="TemplateEngine">
-      <HintPath>..\..\TemplateEngine\TemplateEngine\obj\Debug\TemplateEngine.dll</HintPath>
+    <Reference Include="TemplateEngine, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TemplateEngine.1.0.0\lib\net472\TemplateEngine.dll</HintPath>
     </Reference>
     <Reference Include="WebGrease">
       <Private>True</Private>
@@ -170,65 +170,51 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\MapperConfig.cs" />
-    <Compile Include="Classes\AllocationMapper.cs" />
-    <Compile Include="Classes\BaseController.cs" />
-    <Compile Include="Classes\DatabaseProcedures.cs" />
+    <Compile Include="Classes\Enums.cs" />
     <Compile Include="Classes\PageScope.cs" />
-    <Compile Include="Classes\TransactionMapper.cs" />
-    <Compile Include="Classes\TransactionParser.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.Auth.cs" />
-    <Compile Include="Classes\TransactionXRef.cs" />
     <Compile Include="Classes\WebCache.cs" />
-    <Compile Include="Controllers\AccountController.cs" />
+    <Compile Include="Controllers\AdminController.cs" />
     <Compile Include="Controllers\Angular\ImportController.cs" />
+    <Compile Include="Controllers\BalancesController.cs" />
     <Compile Include="Controllers\BudgetController.cs" />
     <Compile Include="Controllers\ImportController.cs" />
     <Compile Include="Controllers\TransactionsController.cs" />
-    <Compile Include="Controllers\TransferController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Helpers\MVCHelpers.cs" />
-    <Compile Include="Classes\FinancesDBContext.cs" />
-    <Compile Include="Models\DomainModels\BankAccount.cs" />
-    <Compile Include="Models\DomainModels\MappedTransaction.cs" />
-    <Compile Include="Models\DomainModels\PeriodBudget.cs" />
-    <Compile Include="Models\DomainModels\PeriodBudgetLine.cs" />
-    <Compile Include="Models\DomainModels\Transaction.cs" />
-    <Compile Include="Models\DomainModels\UploadPath.cs" />
-    <Compile Include="Models\ViewModels\AccountViewModels.cs" />
-    <Compile Include="Models\IdentityModels.cs" />
-    <Compile Include="Models\ViewModels\AllocationViewModel.cs" />
-    <Compile Include="Models\ViewModels\BudgetLineViewModel.cs" />
-    <Compile Include="Models\ViewModels\PeriodBudgetViewModel.cs" />
-    <Compile Include="Models\ViewModels\TransactionViewModel.cs" />
+    <Compile Include="Models\BankAccount.cs" />
+    <Compile Include="Models\BudgetLineBalance.cs" />
+    <Compile Include="Models\MappedTransaction.cs" />
+    <Compile Include="Models\PeriodBalance.cs" />
+    <Compile Include="Models\PeriodBudgetLine.cs" />
+    <Compile Include="Models\Transaction.cs" />
+    <Compile Include="Models\UploadPath.cs" />
+    <Compile Include="Presenters\AdminPresenter.cs" />
+    <Compile Include="Presenters\BalancesPresenter.cs" />
     <Compile Include="Presenters\TransactionsPresenter.cs" />
     <Compile Include="Presenters\BudgetPresenter.cs" />
     <Compile Include="Presenters\ImportPresenter.cs" />
-    <Compile Include="Presenters\REMOVE_PresenterBase.cs" />
     <Compile Include="Presenters\MasterPresenter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Startup.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\Admin.css" />
     <Content Include="Content\AppLayout.css" />
-    <Content Include="Content\Balance.css" />
-    <Content Include="Content\bootstrap.css" />
-    <Content Include="Content\bootstrap.min.css" />
+    <Content Include="Content\Balances.css" />
     <Content Include="Content\Budget.css" />
     <Content Include="Content\Import.css" />
     <Content Include="Content\jquery-ui.min.css" />
     <Content Include="Content\master.css" />
-    <Content Include="Content\obsolete.css" />
     <Content Include="Content\Transactions.css" />
-    <Content Include="DevelopmentNotes.txt" />
     <Content Include="favicon.ico" />
-    <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Global.asax" />
-    <Content Include="Content\Site.css" />
+    <Content Include="Scripts\App\admin.js" />
+    <Content Include="Scripts\App\balances.js" />
     <Content Include="Scripts\Libraries\angular.min.js" />
     <Content Include="Scripts\Libraries\bootstrap.js" />
     <Content Include="Scripts\Libraries\bootstrap.min.js" />
@@ -252,6 +238,7 @@
     <Content Include="Scripts\Libraries\table-scroll.min.js" />
     <Content Include="Scripts\App\transactions.js" />
     <Content Include="Scripts\Libraries\_references.js" />
+    <Content Include="TemplateEngine.jpg" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
@@ -259,58 +246,21 @@
     <Content Include="Web.Release.config">
       <DependentUpon>Web.config</DependentUpon>
     </Content>
-    <Content Include="Views\Web.config" />
-    <Content Include="Views\_ViewStart.cshtml" />
-    <Content Include="Views\Shared\Error.cshtml" />
-    <Content Include="Views\Shared\_Layout.cshtml" />
-    <Content Include="Views\Home\About.cshtml" />
-    <Content Include="Views\Home\Contact.cshtml" />
-    <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Scripts\Libraries\jquery-1.10.2.min.map" />
-    <Content Include="Views\Account\_ChangePasswordPartial.cshtml" />
-    <Content Include="Views\Account\_ExternalLoginsListPartial.cshtml" />
-    <Content Include="Views\Account\_RemoveAccountPartial.cshtml" />
-    <Content Include="Views\Account\_SetPasswordPartial.cshtml" />
-    <Content Include="Views\Account\ExternalLoginConfirmation.cshtml" />
-    <Content Include="Views\Account\ExternalLoginFailure.cshtml" />
-    <Content Include="Views\Account\Login.cshtml" />
-    <Content Include="Views\Account\Manage.cshtml" />
-    <Content Include="Views\Account\Register.cshtml" />
-    <Content Include="Views\Shared\_LoginPartial.cshtml" />
-    <Content Include="Views\Import.cshtml" />
-    <Content Include="Views\Transaction\Index.cshtml" />
-    <Content Include="Views\Transaction\_UploadFile.cshtml" />
-    <Content Include="Views\Import\_Transaction.cshtml" />
-    <Content Include="Views\Transaction\SelectFile.cshtml" />
-    <Content Include="Views\Transaction\FileData.cshtml" />
-    <Content Include="Views\Budget\Index.cshtml" />
-    <Content Include="Views\Budget\_BudgetLine.cshtml" />
-    <Content Include="Views\Budget\_BudgetCategory.cshtml" />
-    <Content Include="Views\Shared\_Menu.cshtml" />
-    <Content Include="Views\Shared\_AppLayout.cshtml" />
-    <Content Include="Views\Budget\Balances.cshtml" />
-    <Content Include="Views\Budget\_BalanceByAccount.cshtml" />
-    <Content Include="Views\Budget\_Balance.cshtml" />
-    <Content Include="Views\Transfer\Index.cshtml" />
     <Content Include="Templates\Budget.tpl" />
     <Content Include="Templates\Master.tpl" />
     <Content Include="Templates\Import.tpl" />
     <Content Include="Templates\Transactions.tpl" />
     <Content Include="Templates\Common.tpl" />
-    <Content Include="Views\Import\Import.cshtml" />
-    <Content Include="Views\Shared\_NavigationLayout.cshtml" />
+    <Content Include="Templates\Balances.tpl" />
+    <Content Include="Templates\Admin.tpl" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Code\" />
     <Folder Include="App_Data\" />
-    <Folder Include="Views\BudgetTools\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="fonts\glyphicons-halflings-regular.woff" />
-    <Content Include="fonts\glyphicons-halflings-regular.ttf" />
-    <Content Include="fonts\glyphicons-halflings-regular.eot" />
     <Content Include="packages.config" />
-    <None Include="Project_Readme.html" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BudgetToolsBLL\BudgetToolsBLL.csproj">

@@ -1,7 +1,6 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using BudgetTools.Classes;
-using BudgetTools.Models.DomainModels;
+using BudgetTools.Models;
 using BudgetToolsBLL.Services;
 using TemplateEngine;
 
@@ -46,10 +45,7 @@ namespace BudgetTools.Presenters
             writer.AppendSection(true);
 
             writer.SelectProvider("BODY");
-            writer.SelectProvider("SELECTOR");
-            writer.AppendSection(true);
-
-            writer.SelectSection("ROWS");
+            writer.SelectSection("ROW");
             GetTransactionRows(writer);
             writer.AppendAll();
 

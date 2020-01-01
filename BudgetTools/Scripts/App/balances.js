@@ -1,15 +1,16 @@
 ﻿$(document).ready(function () {
+    disableBankAccount();
     setHeaders();
-    updateGrandTotals();
     bindEvents();
 });
 
 function bindEvents() {
-    $("#budgetLines input").change(updateRow);
-    $("#bankAccountId").change(changeBankAccount);
+    //$("#budgetLines input").change(updateRow);
+    //$("#bankAccountId").change(changeBankAccount);
     $("#periodId").change(changePeriod);
 }
 
+/*
 function changeBankAccount() {
     var data = {
         bankAccountId: $("#bankAccountId").val()
@@ -34,7 +35,7 @@ function changeBankAccount() {
         }
     });
 }
-
+*/
 function changePeriod() {
     var data = {
         periodId: $("#periodId").val()
@@ -42,15 +43,16 @@ function changePeriod() {
 
     // save the values
     $.ajax({
-        url: 'Budget/ChangePeriod',
+        url: 'Balances/ChangePeriod',
         type: "POST",
         data: JSON.stringify(data),
         dataType: 'html',
         contentType: 'application/json; charset=utf-8',
         success: function (data, textStatus, jqXHR) {
-            $("tbody").html(data);
+            $(".content-section-div").html(data);
+            disableBankAccount();
             setHeaders();
-            updateGrandTotals();
+            //updateGrandTotals();
         },
         error: function (xhr, textStatus, errorThrown) {
             alert('Error: ' + xhr.statusText);
@@ -60,6 +62,11 @@ function changePeriod() {
     });
 }
 
+function disableBankAccount() {
+    $("#bankAccountId").prop("disabled", true);
+}
+
+/*
 function updateRow(event) {
 
     // get changed field and use it to fetch the cells in the current row
@@ -86,16 +93,16 @@ function updateRow(event) {
             updateCategoryTotals(field);
             updateGrandTotals();
         },
-        error: function(xhr, textStatus, errorThrown) {
+        error: function (xhr, textStatus, errorThrown) {
             alert('Error: ' + xhr.statusText);
             alert(errorThrown);
             alert(xhr.responseText);
         }
     });
 }
-
+*/
 function setHeaders() {
-    var dataCells = $("#budgetLines tbody tr:first-child td");
+    var dataCells = $("#balances tbody tr:first-child td");
     if (dataCells.length == 0) return;
 
     var hdrCells = $(".tableheader-div").find("div");
@@ -107,7 +114,7 @@ function setHeaders() {
         $(totalCells[index]).width(width - 0);
     });
 }
-
+/*
 function updateCategoryTotals(elem) {
 
     // get the parent tr tag's budget category
@@ -117,7 +124,7 @@ function updateCategoryTotals(elem) {
     var trs = $("[data-category='" + category + "']");
     var summary = $(trs.filter("[data-type='summary']")[0]);
     var details = trs.filter("[data-type!='summary']");
-    
+
     // initialize totals array
     var totals = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
@@ -125,17 +132,16 @@ function updateCategoryTotals(elem) {
     for (var i = 0; i < details.length; i++) {
         var row = new Row($(details[i]));
 
-        for (var j = 0; j < 6; j++)
-        {
+        for (var j = 0; j < 6; j++) {
             totals[j] = totals[j] + row.cellValues[j];
         }
     }
-    
+
     // get all of the td tags in the summary tr tag
     var tds = summary.find("td");
 
     // loop the summary td tags and update their text
-    for (i = 1; i < tds.length; i++) {
+    for (var i = 1; i < tds.length; i++) {
         var td = $(tds[i]);
         setCurrency(td, totals[i - 1]);
     }
@@ -157,7 +163,7 @@ function updateGrandTotals() {
     var totalCells = $(".totals-div").find("div");
 
     for (i = 0; i < 6; i++) {
-        setCurrency($(totalCells[i + 1]), totals[i]);
+        $(totalCells[i + 1]).text(totals[i].toFixed(2));
     }
 }
 
@@ -168,12 +174,12 @@ function Row(elem, adjustValues) {
     var td, tr;
 
     // find the row and cell for this element
-    if (elem.prop('nodeName') === "TR") {
+    if (elem.prop('nodeName') == "TR") {
         tr = elem;
         td = $(elem.find("td")[0]);
     }
     else {
-        td = elem.prop('nodeName') === "INPUT" ? elem.parent() : elem;
+        td = (elem.prop('nodeName') == "INPUT") ? elem.parent() : elem;
         tr = td.parent();
     }
 
@@ -190,7 +196,7 @@ function Row(elem, adjustValues) {
     this.adjustValues = function (index) {
 
         // recalculate the amounts so that they balance
-        if (index === 1) {
+        if (index == 1) {
             // allocated = planned - accrued;
             this.cellValues[1] = this.cellValues[0] - this.cellValues[2];
         }
@@ -199,112 +205,46 @@ function Row(elem, adjustValues) {
             this.cellValues[0] = this.cellValues[1] + this.cellValues[2];
         }
 
-        // recalculate the remaining amount
-        this.cellValues[4] = this.cellValues[0] - this.cellValues[3];
-
         // update the cell text
-        for (var i = 0; i < 5; i++) {
-            if (i === 3) continue;
-            setCurrency(this.cells[i], this.cellValues[i]);
+        for (var i = 0; i < 3; i++) {
+            this.setCurrency(this.cells[i], this.cellValues[i]);
         }
 
-    };
+    }
+
+    this.getNumber = function (value) {
+        if (!value) return 0.0;
+        return Number(value.toString().replace(/[^-.0-9]/g, ""));
+    }
+
+    this.setCurrency = function (elem, value) {
+        var curValue = Number(value).toLocaleString(undefined, { style: "currency", currency: "USD" });
+
+        if (elem.prop("nodeName") == "INPUT") {
+            elem.val(curValue);
+        }
+        else {
+            elem.text(curValue);
+        }
+    }
 
     // get all of the cells and cell values for this row
     for (var i = 1; i < tds.length; i++) {
-        
-        var tdx = $(tds[i]);
-        var inputs = tdx.find("input");
-        var input = inputs.length > 0 ? $(inputs[0]) : null;
 
-        if(input) {
+        var tdx = $(tds[i]);
+        var input = $(tdx.find("input")[0]);
+
+        if (input) {
             this.cells.push(input);
-            this.cellValues.push(getNumber(input.val()));
+            this.cellValues.push(this.getNumber(input.val()));
         }
         else {
             this.cells.push(tdx);
-            this.cellValues.push(getNumber(tdx.text()));
+            this.cellValues.push(this.getNumber(tdx.text()));
         }
     }
-    
+
     if (adjustValues) this.adjustValues(index);
 
-}
-
-/*
-function getValue(elemPrefix, budgetLineId) {
-  var elemName = '#' + elemPrefix + '_' + budgetLineId.toString();
-  var elem = $(elemName);
-  var elemVal = (elem.val() || elem.html() || 0.00);
-  var sign = (elemVal.toString().substr(0, 1) == '(') ? -1 : 1;
-  var exp = new RegExp("[($),]", "gi");
-  var val = elemVal.toString().replace(exp, '');
-  return parseFloat(val) * sign;
-}
-
-function getRowData(elem, typeName) {
-  try{
-    var cell = elem.parentNode;
-    var row = cell.parentNode;
-    var body = row.parentNode;
-    var budgetLineId = row.id.toString().replace('tr_', '');
-    var budgetLineString = budgetLineId.toString();
-    var accruedAmount = getValue('accrued', budgetLineId);
-    var allocatedAmount = getValue('allocated', budgetLineId);
-    var plannedAmount = getValue('planned', budgetLineId);
-    var accruedBalance = getValue('td_balance', budgetLineId);
-
-    if (typeName == 'planned'){
-      allocatedAmount = plannedAmount - accruedAmount;
-    }
-    else if (typeName == 'allocated'){
-      plannedAmount = allocatedAmount + accruedAmount
-    }
-    else{
-        plannedAmount = allocatedAmount + accruedAmount;
-    }
-
-    var selectedValue = $('#BankAccountId :selected').val();
-
-    var data = {
-      BudgetLineId: budgetLineId,
-      BankAccountId: selectedValue,
-      AccruedAmount: accruedAmount,
-      AllocatedAmount: allocatedAmount,
-      PlannedAmount: plannedAmount
-    }
-
-    $.ajax({
-      url: buildUrl('Budget/SaveBudgetLine'),
-      type: "POST",
-      data: JSON.stringify(data),
-      dataType: 'html',
-      contentType: 'application/json; charset=utf-8',
-      success: function (data2) {
-        body.innerHTML = data2;
-      },
-      error: function (xhr, textStatus, errorThrown) {
-        alert('Error: ' + xhr.statusText);
-        alert(errorThrown);
-        alert(xhr.responseText);
-      },
-      async: false
-    });
-  }
-  catch (e) {
-    alert(e.message);
-  }
-}
-
-function handleAccruedClick(elem) {
-  getRowData(elem, 'accrued');
-}
-
-function handleAllocatedClick(elem) {
-  getRowData(elem, 'allocated');
-}
-
-function handlePlannedClick(elem) {
-  getRowData(elem, 'planned');
 }
 */

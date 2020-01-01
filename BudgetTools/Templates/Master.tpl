@@ -8,12 +8,12 @@
     @Styles.Render("~/Content/css")
     @Scripts.Render("~/bundles/modernizr")
     -->
-    <link href="~/Content/AppLayout.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="Content/jquery-ui.min.css">
-    <link rel="stylesheet" href="Content/master.css">
-    <script src="Scripts/jquery-1.10.2.min.js"></script>
-    <script src="jquery-ui.min.js"></script>
-    <script type="text/javascript" src="Scripts/master.js"></script>
+    <link rel="stylesheet" href="Content/AppLayout.css" />
+    <link rel="stylesheet" href="Content/jquery-ui.min.css" />
+    <link rel="stylesheet" href="Content/master.css" />
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" type="text/javascript"></script>
+    <script src="Scripts/App/master.js" type="text/javascript"></script>
     <!-- TODO: add js reference for the button actions and common navigation -->
     @@HEAD@@
 </head>
@@ -24,14 +24,14 @@
             <input type="button" class="nav-button" value="Transactions"/>
             <input type="button" class="nav-button" value="Budget"/>
             <input type="button" class="nav-button" value="Balances"/>
-            <input type="button" class="nav-button" value="Categories"/>
+            <input type="button" class="nav-button" value="Admin"/>
         </div>
     </div>
     <div class="body-div">
     @@BODY@@
     </div>
     <div class="footer-div">
-        <div>Copyright: Gene Graves 2017-2019 </div>
+        <div>Copyright: Gene Graves 2017-2020 </div>
     </div>
   @@TAIL@@
 </body>

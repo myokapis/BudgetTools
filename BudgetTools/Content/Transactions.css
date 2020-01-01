@@ -42,19 +42,33 @@
 .tableheader-div {
     background: #ddd;
     padding-left: 20px;
+    padding-right: 26px;
     display: block;
+    overflow: hidden;
+    text-wrap: none;
+    width: 100%;
+    border-bottom: solid 1px #777777;
 }
 
 .tableheader-div div {
-    padding: 4px 0px;
+    padding: 4px 4px 4px 4px;
     font-weight: bold;
     font-size: 14px;
     text-align: left;
     float: left;
     display: block;
-    border-bottom: solid 1px #777777;
+    width: calc(15% - 8px);
+}
+/*
+.tableheader-div div:nth-of-type(4) {
+    width: calc(54% - 8px);
 }
 
+.tableheader-div div:nth-of-type(5) {
+    width: 20px;
+    border-bottom: none;
+}
+*/
 .table-div {
     overflow-y: scroll;
     overflow-x: hidden;
@@ -66,11 +80,13 @@
 
 #transactions {
     overflow: hidden;
+    width: 100%;
 }
 
 #transactions td {
     padding: 4px 4px;
     min-width: 80px;
+    max-width: 120px;
     border-bottom: 1px solid #eeeeee;
     border-left: none;
     border-right: none;
@@ -82,9 +98,13 @@
     background-color: #dddddd;
 }
 
-.transaction-row {
-    cursor: default;
+#transactions td:nth-child(4) {
+    width: 90%;
 }
+
+    .transaction-row {
+        cursor: default;
+    }
 
 .transaction-row-mapped {
     color: #2152aa;

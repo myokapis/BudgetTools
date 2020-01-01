@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text;
 using System.Text.RegularExpressions;
-using BudgetToolsBLL.Helpers;
 
 namespace BudgetToolsBLL.Models
 {
@@ -13,7 +12,7 @@ namespace BudgetToolsBLL.Models
 
         public StagedTransaction(int bankAccountId, string[] data)
         {
-            this.Amount = Converters.ToDouble(GetValue(data[4], data[5], data[8]));
+            this.Amount = int.TryParse(GetValue(data[4], data[5], data[8]), out var amount) ? amount : 0d;
             this.BankAccountId = bankAccountId;
             this.CheckNo = string.IsNullOrWhiteSpace(data[7]) ? new int?() : int.Parse(data[7]);
             this.TransactionDate = DateTime.Parse(data[1]);
@@ -56,7 +55,7 @@ namespace BudgetToolsBLL.Models
 
         protected string GetValue(params string[] items)
         {
-            foreach(var item in items)
+            foreach (var item in items)
             {
                 if (!string.IsNullOrWhiteSpace(item)) return item;
             }

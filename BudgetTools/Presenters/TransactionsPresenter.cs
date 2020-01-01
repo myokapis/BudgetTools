@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using BudgetTools.Classes;
-using BudgetTools.Models.DomainModels;
+using BudgetTools.Models;
 using BudgetToolsBLL.Services;
 using TemplateEngine;
 
@@ -39,9 +38,9 @@ namespace BudgetTools.Presenters
 
         public string GetEditor(Transaction transaction = null)
         {
-            var writer = contentWriter.GetWriter("EDITOR");
+            var writer = contentWriter.GetWriter("EDITOR", true);
             GetEditor(writer, transaction);
-            return writer.GetContent();
+            return writer.GetContent(true);
         } 
 
         private void GetEditor(ITemplateWriter writer, Transaction transaction = null)
@@ -80,7 +79,7 @@ namespace BudgetTools.Presenters
             }
 
             writer.DeselectSection();
-            writer.AppendSection();
+            //writer.AppendSection();
         }
 
         public string GetPage()
@@ -94,7 +93,8 @@ namespace BudgetTools.Presenters
 
             writer.SelectProvider("BODY");
             writer.SelectProvider("SELECTOR");
-            writer.AppendSection(true);
+            GetSelector(writer);
+            //writer.AppendSection(true);
 
             writer.SelectSection("ROW");
             GetTransactionRows(writer);
@@ -102,6 +102,7 @@ namespace BudgetTools.Presenters
 
             writer.SelectSection("EDITOR");
             GetEditor(writer, null);
+            writer.AppendAll();
 
             return writer.GetContent();
         }
@@ -109,7 +110,8 @@ namespace BudgetTools.Presenters
         public string GetTransactionRows()
         {
             var writer = contentWriter.GetWriter("ROW");
-            writer.SelectSection("ROW");
+            //writer.SelectSection("ROW");
+            GetTransactionRows(writer);
             return writer.GetContent();
         }
 

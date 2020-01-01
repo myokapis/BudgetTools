@@ -1,5 +1,5 @@
 ﻿.table-div {
-    margin-top: 16px;
+    margin: 16px auto auto auto;
     background-color: #ddd;
     padding: 16px 16px 16px 16px;
     clear: both;
@@ -42,7 +42,7 @@ input[type="file"] {
 .file-button {
     text-align: center;
     margin: 0;
-    padding: 2px auto 4px auto;
+    padding: 2px unset 4px unset;
     vertical-align: middle;
 }
 

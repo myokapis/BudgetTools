@@ -61,6 +61,7 @@
     <Compile Include="Models\BudgetLine.cs" />
     <Compile Include="Models\BudgetLineSet.cs" />
     <Compile Include="Models\MappedTransaction.cs" />
+    <Compile Include="Models\Message.cs" />
     <Compile Include="Models\Period.cs" />
     <Compile Include="Models\PeriodBalance.cs" />
     <Compile Include="Models\PeriodBudgetLine.cs" />

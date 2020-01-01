@@ -1,8 +1,12 @@
-ALTER PROCEDURE dbo.uspUpdatePeriodBalances
-  @PeriodID                           int,
-  @ClosePeriod                        bit = 0
-AS
+IF OBJECT_ID('dbo.uspUpdatePeriodBalances', 'P') IS NULL
+    EXEC('CREATE PROCEDURE dbo.uspUpdatePeriodBalances AS SELECT 1;');
+GO
 
+ALTER PROCEDURE dbo.uspUpdatePeriodBalances
+    @PeriodId int = null,
+    @ClosePeriod bit = 0
+AS
+-- TODO: refactor proc to allow any open period to have its balances updated
 SET NOCOUNT ON
 
 DECLARE @BeginTranCount                 int;
@@ -13,7 +17,7 @@ DECLARE @CurrentPeriodEndDate           date
 DECLARE @CashBudgetLineID               int
 DECLARE @DefaultAccountId               int
 DECLARE @DefaultMoney                   money;
-DECLARE @ErrorCount                     int
+DECLARE @ErrorCount                     int = 0;
 DECLARE @ErrorMessage			              nvarchar(4000)
 DECLARE @ErrorSeverity			            int
 
@@ -95,7 +99,6 @@ CREATE TABLE #Adjustments
 IF OBJECT_ID('tempdb.dbo.#Consolidated') IS NOT NULL
   DROP TABLE #Consolidated;
 
-
 CREATE TABLE #Consolidated
 (
   BankAccountID                   int,
@@ -139,8 +142,25 @@ BEGIN TRY
       @PreviousPeriodID = MAX(CASE WHEN IsOpen = 0 THEN PeriodID ELSE 0 END)
   FROM dbo.Periods (NOLOCK);
 
-  IF ISNULL(@CurrentPeriodID, 99999999) != @PeriodID OR @PreviousPeriodID IS NULL
-      RAISERROR('Invalid Period', 16, 1)
+    -- can't update balances on a closed period
+    IF @PeriodID < @CurrentPeriodID
+    BEGIN
+        INSERT INTO @Errors(ErrorText)
+        VALUES('Unable to update balances on a closed period.')
+
+        SELECT @ErrorCount = @ErrorCount + 1;
+        GOTO ExitProc;
+    END
+
+    -- current and previous period must be valid
+    IF @CurrentPeriodID IS NULL OR @PreviousPeriodID IS NULL
+    BEGIN
+        INSERT INTO @Errors(ErrorText)
+        VALUES('Unable to update balances on an invalid period.')
+
+        SELECT @ErrorCount = @ErrorCount + 1;
+        GOTO ExitProc;
+    END
 
   -- get the starting and ending dates for the current period
   SELECT @CurrentPeriodStartDate = PeriodStartDate,
@@ -167,7 +187,7 @@ BEGIN TRY
     AND TransactionTypeCode = 'X'
   HAVING SUM(Amount) != 0
 
-  SELECT @ErrorCount = @@ROWCOUNT;
+  SELECT @ErrorCount = @ErrorCount + @@ROWCOUNT;
 
   -- check for unbalanced transactions
   WITH
@@ -246,7 +266,7 @@ BaseData AS
     t.Amount AS ActualAmount
   FROM dbo.vwTransactions t
   WHERE t.TransactionTypeCode IN('S', 'X')
-    AND t.PeriodID = @PeriodID
+    AND t.PeriodID = @CurrentPeriodID
 )
 INSERT INTO #Actuals(BankAccountID, BudgetLineID, TransactionTypeCode,
   DebitCreditFlag, ActualAmount)
@@ -262,7 +282,7 @@ SELECT BankAccountID, BudgetLineID,
   SUM(AllocatedAmount) AS AllocatedAmount,
   SUM(AccruedAmount) AS AccruedAmount
 FROM dbo.Allocations
-WHERE PeriodID = @PeriodID
+WHERE PeriodID = @CurrentPeriodID
 GROUP BY BankAccountID, BudgetLineID;
 
 -- get a summary for each line by account and transaction type
@@ -451,10 +471,11 @@ HAVING SUM(LineAdjustment) != 0 OR SUM(ProjectedLineAdjustment) != 0;
 
 -- pick up manual adjustments
 INSERT INTO #Consolidated(BankAccountID, BudgetLineID, AdjustmentTypeCode, TotalAmount, ProjectedAmount)
-SELECT BankAccountID, BudgetLineID, AdjustmentTypeCode, Amount, 0.00
+SELECT BankAccountID, BudgetLineID, AdjustmentTypeCode, SUM(Amount), 0.00
 FROM dbo.PeriodAdjustments pa
-WHERE PeriodID = @PeriodID
-  AND AdjustmentTypeCode = 'M';
+WHERE PeriodID = @CurrentPeriodID
+  AND AdjustmentTypeCode = 'M'
+GROUP BY BankAccountID, BudgetLineID, AdjustmentTypeCode;
 
 ------------------------------------------------------------------------------
 -- persist data
@@ -528,13 +549,24 @@ BEGIN CATCH
 END CATCH
 
 ExitProc:
-  
-  IF @ErrorCount = 0
-  BEGIN
-    IF @ClosePeriod = 1 SELECT 'Period Closed';
-  END
-  ELSE
-    SELECT 'Period has ' + CAST(@ErrorCount AS varchar(10)) + ' errors and cannot be closed in its current state.'
+
+    SELECT CASE WHEN @ErrorCount > 0 THEN 16 ELSE 0 END AS ErrorLevel,
+        CASE WHEN @ErrorCount > 0 THEN
+            CASE @ClosePeriod
+                WHEN 1 THEN 'Period could not be closed.'
+                ELSE 'Period balances could not be updated.'
+            END
+        ELSE
+            CASE @ClosePeriod
+                WHEN 1 THEN 'Period was closed.'
+                ELSE 'Period balances were updated.'
+            END
+        END AS MessageText
     UNION ALL
-    SELECT ErrorText
+    SELECT 16 AS ErrorLevel, ErrorText AS MessageText
     FROM @Errors;
+
+GO
+
+grant execute, view definition on dbo.uspUpdatePeriodBalances to exec_procs;
+go

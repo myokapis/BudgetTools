@@ -7,7 +7,7 @@
 function bindEvents() {
     $("#bankAccountId").change(changeBankAccount);
     $("#periodId").change(changePeriod);
-    $("#transactions tbody tr").click(selectRow);
+    $("#transactions").on("click", "tbody tr", selectRow);
     $("#prev").click(prevRow);
     $("#next").click(nextRow);
     $("#save").click(saveRow);
@@ -54,7 +54,6 @@ function changeBankAccount() {
         contentType: 'application/json; charset=utf-8',
         success: function (data, textStatus, jqXHR) {
             $("#transactions > tbody").html(data.transactions);
-            $(".editor-section-div").html(data.editor);
             setHeaders();
             selectFirstRow();
         },
@@ -79,9 +78,9 @@ function changePeriod() {
         data: JSON.stringify(data),
         dataType: 'json',
         contentType: 'application/json; charset=utf-8',
-        success: function (data, textStatus, jqXHR) {
+        success: function (data) {
             $("#transactions > tbody").html(data.transactions);
-            $(".editor-section-div").html(data.editor);
+            //$(".editor-section-div").html(data.editor);
             setHeaders();
             selectFirstRow();
         },
@@ -97,7 +96,8 @@ function fillEditor(data) {
 
     // fill the descriptive fields
     $('#transactionId').val(data.transactionId);
-    $('#amount').text(data.amount);
+    $('#amount').text(formatAmount(Math.abs(data.amount)));
+    $('#amount').attr('data-sign', data.amount < 0.0 ? -1 : 1);
     $('#transactionType').val(data.transactionType);
     $('#recipient').val(data.recipient);
     $('#notes').val(data.notes);
@@ -117,9 +117,9 @@ function fillEditor(data) {
         var input = $(row).find('input');
 
         // set the field values
-        var data = i < xactCount ? mapped[i] : { budgetLineId: 0, amount: 0.0 };
-        select.val(data.budgetLineId);
-        input.val(data.amount);
+        var values = i < xactCount ? mapped[i] : { budgetLineId: 0, amount: 0.0 };
+        select.val(values.budgetLineId);
+        input.val(formatAmount(Math.abs(values.amount)));
     }
 }
 
@@ -127,6 +127,7 @@ function formatAmount(value) {
     return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', useGrouping: false });
 }
 
+// TODO: retire this method
 function getAmount(value, defaultValue) {
     if (!value) return defaultValue || 0.00;
     var regex = /[^-.0-9]/;
@@ -171,9 +172,10 @@ function saveRow() {
     var budgetLineIds = [];
     var mapData = [];
 
-    // get transaction id and remaining amount
+    // get transaction id, remaining amount, and sign
     var transactionId = $('#transactionId').val();
     var remainingAmount = getAmount($('#remainingAmount').text(), null);
+    var sign = Number($('#amount').attr('data-sign'));
 
     // exit if there is no transaction
     if (!transactionId || transactionId <= 0) {
@@ -182,7 +184,7 @@ function saveRow() {
     }
 
     // warn if the allocations don't balance
-    if ((remainingAmount == null) || (remainingAmount != parseFloat(0))) {
+    if (remainingAmount === null || remainingAmount !== parseFloat(0)) {
         alert(remainingAmount);
         alert('Transactions must be fully allocated before saving');
         return false;
@@ -196,14 +198,14 @@ function saveRow() {
         var select = $(row.find('select'));
         var budgetLineId = parseInt(select.val());
         var input = $(row.find('input'));
-        var amount = getAmount(input.val(), null);
+        var amount = getNumber(input.val()) * sign;
 
         if (amount && (!budgetLineId || (budgetLineId <= 0))) {
             alert('Each amount must be associated with a budget line.');
             return false;
         }
 
-        if (!budgetLineId || (budgetLineId <= 0) || (amount == 0.0)) continue;
+        if (!budgetLineId || budgetLineId <= 0 || amount === 0.0) continue;
 
         if (budgetLineIds.indexOf(budgetLineId) >= 0) {
             alert('A budget line may not have a duplicate allocation.');
@@ -237,6 +239,7 @@ function saveRow() {
         data: JSON.stringify(data),
         contentType: 'application/json; charset=utf-8',
         success: function (data, textStatus, jqXHR) {
+            setRowAsMapped(transactionId);
             nextRow();
         },
         error: function (xhr, textStatus, errorThrown) {
@@ -250,6 +253,9 @@ function saveRow() {
 
 function selectFirstRow() {
     var row = $("#transactions tbody tr:first-child");
+
+    if (row.length === 0) return;
+
     $(row)[0].scrollIntoView();
     row.click();
 }
@@ -286,16 +292,20 @@ function selectRow(event) {
 }
 
 function setHeaders() {
-    var dataCells = $("#transactions tbody tr:first-child").find("td");
+    var dataCells = $("#transactions tbody tr:first-child td");
+    if (dataCells.length == 0) return;
+
     var hdrCells = $(".tableheader-div").find("div");
 
-    for (i = 0; i < dataCells.length; i++) {
-        var width = $(dataCells[i]).outerWidth();
-        $(hdrCells[i]).width(width);
-    }
+    dataCells.each(function (index, dataCell) {
+        var width = $(dataCell).outerWidth();
+        $(hdrCells[index]).width(width - 8);
+    });
 }
 
-
+function setRowAsMapped(transactionId) {
+    $("#transactions [data-id=" + transactionId + "]").addClass("transaction-row-mapped");
+}
 
 
 //// extensions

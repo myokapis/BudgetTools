@@ -11,10 +11,9 @@ namespace BudgetTools
 
             routes.MapRoute(
                 name: "Default",
-                url: "Angular/{controller}/{action}/{id}",
-                namespaces: new string[] { "BudgetTools.Controllers.Angular" },
-                // TODO: reset this to the transaction page when done developing
-                defaults: new { controller = "Import", action = "Index", id = UrlParameter.Optional }
+                url: "{controller}/{action}/{id}",
+                namespaces: new string[] { "BudgetTools.Controllers" },
+                defaults: new { controller = "Transactions", action = "Index", id = UrlParameter.Optional }
             );
         }
     }
