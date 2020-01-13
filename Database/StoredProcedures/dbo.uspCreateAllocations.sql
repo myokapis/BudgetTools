@@ -1,53 +1,85 @@
-USE BudgetTools;
+IF OBJECT_ID('dbo.uspCreateAllocations', 'P') IS NULL
+    EXEC('CREATE PROCEDURE dbo.uspCreateAllocations AS SELECT 1;');
 GO
 
-CREATE PROCEDURE dbo.uspCreateAllocations
-  @PeriodId                   int
+ALTER PROCEDURE dbo.uspCreateAllocations
+    @PeriodId int
 AS
 
 SET NOCOUNT ON;
-DECLARE @PriorPeriodId int;
+DECLARE @PreviousPeriodID int;
+DECLARE @ThisPeriodID int;
+DECLARE @PrevPeriodID int;
 DECLARE @CashBudgetLineId int;
 
--- get the prior period
-SELECT @PriorPeriodId = CONVERT(varchar(6), DATEADD(month, -1, CONVERT(date, CAST(@PeriodId * 100 + 1 AS varchar(8)), 112)), 112);
+DECLARE @Periods TABLE
+(
+    PeriodId int NOT NULL PRIMARY KEY,
+    IsOpen bit NOT NULL
+);
+
+-- get current and previous periods
+SELECT @PreviousPeriodID = MAX(PeriodID)
+FROM dbo.Periods (NOLOCK)
+WHERE IsOpen = 0;
 
 -- get the cash account
 SELECT @CashBudgetLineId = BudgetLineId
 FROM dbo.BudgetLines
 WHERE BudgetLineName = 'Cash';
 
+-- get periods to process
+INSERT INTO @Periods(PeriodId, IsOpen)
+SELECT PeriodId, IsOpen
+FROM dbo.Periods
+WHERE PeriodId BETWEEN @PreviousPeriodID AND @PeriodId;
+
 -- add planned amounts
 INSERT INTO dbo.Allocations(PeriodId, BudgetLineId, PlannedAmount,
   AllocatedAmount, AccruedAmount, BankAccountID)
-SELECT @PeriodId, at.BudgetLineId, at.PlannedAmount, at.AllocatedAmount,
-  at.AccruedAmount, at.BankAccountId
-FROM dbo.AllocationTemplate at
-  LEFT JOIN dbo.Allocations a ON at.BudgetLineId = a.BudgetLineId
-    AND at.BankAccountId = a.BankAccountId
-    AND a.PeriodId = @PeriodId
-WHERE at.IsActive = 1
-  AND a.BudgetLineId IS NULL;
+SELECT p.PeriodId, t.BudgetLineId, t.PlannedAmount, t.AllocatedAmount,
+    t.AccruedAmount, t.BankAccountId
+FROM dbo.AllocationTemplate t
+CROSS JOIN @Periods p
+WHERE t.IsActive = 1
+AND p.IsOpen = 1
+AND NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.Allocations a
+    WHERE a.BudgetLineId = t.BudgetLineId
+    AND a.BankAccountId = t.BankAccountId
+    AND a.PeriodId = p.PeriodId
+);
 
 -- add any budget lines for which a balance exists and that are not in the plan
 WITH
 BudgetLines AS
 (
-  SELECT BudgetLineId, BankAccountId
-  FROM dbo.PeriodBalances
-  WHERE PeriodId IN(@PeriodId, @PriorPeriodId)
-    AND Balance != 0.0
+    SELECT b.BudgetLineId, b.BankAccountId
+    FROM dbo.PeriodBalances b
+    INNER JOIN @Periods pp ON b.PeriodId = pp.PeriodId
+    WHERE Balance != 0.0
     AND BudgetLineId != @CashBudgetLineId
-  GROUP BY BudgetLineId, BankAccountId
+    GROUP BY b.BudgetLineId, b.BankAccountId
 )
 INSERT INTO dbo.Allocations(PeriodId, BudgetLineId, PlannedAmount,
-  AllocatedAmount, AccruedAmount, BankAccountID)
+    AllocatedAmount, AccruedAmount, BankAccountID)
 SELECT @PeriodId, bl.BudgetLineId, 0.0 AS PlannedAmount,
-  0.0 AS AllocatedAmount, 0.0 AS AccruedAmount, bl.BankAccountId
+    0.0 AS AllocatedAmount, 0.0 AS AccruedAmount, bl.BankAccountId
 FROM BudgetLines bl
-  LEFT JOIN dbo.Allocations a ON bl.BudgetLineId = a.BudgetLineId
-    AND bl.BankAccountId = a.BankAccountId
-    AND a.PeriodId = @PeriodId
-WHERE a.BudgetLineId IS NULL;
+CROSS JOIN @Periods p
+WHERE p.IsOpen = 1
+AND NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.Allocations a
+    WHERE a.BudgetLineId = bl.BudgetLineId
+    AND a.BankAccountId = bl.BankAccountId
+    AND a.PeriodId = p.PeriodId
+);
 
 GO
+
+grant execute, view definition on dbo.uspCreateAllocations to exec_procs;
+go

@@ -31,3 +31,10 @@ END
 
 GO
 
+if not exists(select top 1 1 from sys.columns where object_id = object_id('dbo.BankAccounts') and name = 'UploadValidator')
+begin
+
+    alter table dbo.BankAccounts
+    add UploadValidator varchar(255) null;
+
+end

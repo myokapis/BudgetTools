@@ -1,183 +1,100 @@
-﻿.budget-grid{
-  float: left;
-  width: 78%;
-  padding: 0px 12px 0px 12px;
+﻿.content-section-div {
+    height: calc(90% - 8px);
+    min-width: 700px;
+    overflow: hidden;
+    display: block;
+    padding: 12px;
+    margin: 0px auto 0px auto;
 }
 
-.budget-editor{
-  float: left;
-  width: 22%;
-  min-width: 150px;
-  padding: 0px 0px 0px 22px;
+.tableheader-div {
+    background: #ddd;
+    padding-left: 20px;
+    display: block;
+    border-bottom: solid 1px #777777;
+    height: 24px;
 }
 
-.budget-outer-table{
-  width: 99%;
-  border: 1px solid black;
+.tableheader-div div {
+    padding: 4px 0px;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: right;
+    float: left;
+    display: block;
+    width: calc(12% - 8px);
 }
 
-.budget-heading{
-  font-weight: bold;
-  color: black;
-  font-family: Tahoma;
-  font-size: 14px;
+.tableheader-div div:nth-of-type(1) {
+    width: calc(30% - 8px);
 }
 
-.budget-head-row{
-  border: 1px solid black;
-  width: 100%;
-  background-color: #78c8e1;
+.tableheader-div div:nth-of-type(8) {
+    width: 20px;
+    border-bottom: none;
 }
 
-.budget-row{
-  border: 1px solid black;
-  width: 100%;
-  cursor: default;
-  background-color: #b4dcdc;
-  font-style: normal;
-  color: black;
-  font-family: Tahoma;
-  font-size: 14px;
+.totals-div {
+    background: #ddd;
+    display: block;
+    padding-left: 20px;
+    height: 24px;
 }
 
-.budget-summary-row{
-  border: 1px solid black;
-  width: 100%;
-  cursor: default;
-  background-color: #ffdcdc;
-  font-style: normal;
-  font-weight: 600;
-  padding-right: 6px;
-  color: black;
-  font-family: Tahoma;
-  font-size: 14px;
+.totals-div div {
+    padding: 4px 0px;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: right;
+    float: left;
+    display: block;
+    width: calc(12% - 8px);
 }
 
-.budget-row-mapped{
-  background-color: #b4dcdc;
-  font-style: italic;
+.totals-div div:nth-of-type(1) {
+    width: calc(30% - 8px);
 }
 
-.budget-row-selected{
-  background-color: #F87217;
+.totals-div div:nth-of-type(8) {
+    width: 20px;
+    border-bottom: none;
 }
 
-.budget-left{
-  text-align: left;
-  padding: 4px 4px 4px 4px;
-  border: 1px solid black;
+.table-div {
+    overflow-y: scroll;
+    overflow-x: hidden;
+    height: calc(100% - 48px);
+    background-color: #ddd;
+    padding-left: 16px;
+    clear: both;
 }
 
-.budget-right{
-  text-align: right;
-  padding: 4px 4px 4px 4px;
-  border: 1px solid black;
+#budgetLines {
+    overflow: hidden;
+    width: 100%;
 }
 
-.tcol-head1{
-  min-width: 282px;
-  max-width: 282px;
-  width: 282px;
+#budgetLines td {
+    padding: 4px 4px;
+    min-width: 80px;
+    border-bottom: 1px solid #EEEEEE;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    text-align: right;
+    margin: 0;
+    white-space: nowrap;
+    font-size: 12px;
 }
 
-.tcol1{
-  min-width: 280px;
-  max-width: 280px;
-  width: 280px;
+td input {
+    text-align: right;
+    max-width: 80px;
+    font-size: 12px;
 }
 
-.tcol2{
-  min-width: 115px;
-  max-width: 115px;
-  width: 115px;
-}
-
-.tcol3{
-  min-width: 115px;
-  max-width: 115px;
-  width: 115px;
-}
-
-.tcol4{
-  min-width: 115px;
-  max-width: 115px;
-  width: 115px;
-}
-
-.tcol5{
-  min-width: 115px;
-  max-width: 115px;
-  width: 115px;
-}
-
-.tcol6{
-  min-width: 115px;
-  max-width: 115px;
-  width: 115px;
-}
-
-.tcol7{
-  min-width: 115px;
-  max-width: 115px;
-  width: 115px;
-}
-
-.tcol8{
-
-}
-
-.budget-inner-wrapper{
-  max-height: 436px;
-  overflow-y: scroll;
-}
-
-.budget-edit-group {
-  clear: both;
-  padding-bottom: 8px;
-}
-
-.budget-edit-element {
-  width: 240px;
-  min-width: 240px;
-  max-width: 240px;
-  max-height: 240px;
-}
-
-.budget-button-group {
-  clear: both;
-  padding-top: 48px;
-}
-
-.budget-button{
-  width: 48px;
-  min-width: 48px;
-  float: left;
-}
-
-.budget-textbox{
-  width: 98%;
-  height: 98%;
-  background-color: transparent;
-  text-align: right;
-  /*background: white;*/
-  border: 1px double #DDD;
-  border-radius: 3px;
-  box-shadow: 0 0 5px #333;
-  /*color: #666;*/
-  /*float: left;*/
-  padding: 2px 2px 2px 2px;
-  /*width: 165px;*/
-  outline: none;
-}
-
-.budget-textbox-selected{
-  background-color: #b6dddd;
-  box-shadow: inset;
-}
-
-.budget-edit-element {
-  width: 175px;
-  min-width: 175px;
-  max-width: 175px;
-  max-height: 175px;
+.rowSummary td {
+    background: #A60000;
+    color: #EEEEEE;
+    font-size: 14px;
 }
