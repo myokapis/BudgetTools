@@ -29,7 +29,7 @@ namespace BudgetTools.Controllers
             string fileName = file.FileName;
             var reader = new StreamReader(file.InputStream);
 
-            this.budgetService.ImportFile(bankAccountId, reader.BaseStream);
+            budgetService.ImportFile(bankAccountId, reader.BaseStream);
         }
 
     }

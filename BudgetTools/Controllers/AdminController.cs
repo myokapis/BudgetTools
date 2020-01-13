@@ -1,9 +1,9 @@
-﻿using System;
-using System.Web.Mvc;
+﻿using System.Web.Mvc;
 using BudgetTools.Classes;
 using BudgetTools.Enums;
 using BudgetTools.Presenters;
 using BudgetToolsBLL.Services;
+using BudgetTools.Models;
 
 namespace BudgetTools.Controllers
 {
@@ -19,9 +19,16 @@ namespace BudgetTools.Controllers
             this.adminPresenter = adminPresenter;
         }
 
+        public void ChangeBankAccount(int bankAccountId)
+        {
+            (Session["pageScope"] as PageScope).BankAccountId = bankAccountId;
+        }
+
         public ActionResult CloseCurrentPeriod()
         {
-            return Content(adminPresenter.CloseCurrentPeriod());
+            var pageScope = Session["pageScope"] as PageScope;
+            var messages = budgetService.CloseCurrentPeriod<Message, PageScope>(ref pageScope);
+            return Content(adminPresenter.GetCloseCurrentPeriodMessages(messages));
         }
 
         public ActionResult GetBalanceTransfer()
@@ -34,32 +41,40 @@ namespace BudgetTools.Controllers
             return Content(adminPresenter.GetCloseCurrentPeriod());
         }
 
-        public ActionResult GetTransferBudgetLines(int bankAccountId, string direction)
+        public JsonResult GetTransferBudgetLines(int bankAccountId)
         {
-            if (!Enum.TryParse<Direction>(direction, out var directionEnum))
-                throw new ArgumentException($"The direction parameter had an invalid value.", "direction");
+            (Session["pageScope"] as PageScope).BankAccountId = bankAccountId;
 
-            return Content(adminPresenter.GetTransferBudgetLines(bankAccountId, directionEnum));
+            var data = new
+            {
+                budgetLinesFrom = adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.From),
+                budgetLinesTo = adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.To)
+            };
+
+            return Json(data);
         }
 
         public ActionResult Index()
         {
-            // TODO: create a base controller and move this to a method on the base
-            var pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            if (pageScope.BankAccountId == 0)
-            {
-                pageScope.BankAccountId = 1;
-                pageScope.PeriodId = int.Parse(DateTime.Now.ToString("yyyyMM"));
-            }
-
             return Content(this.adminPresenter.GetPage());
         }
 
-        public ActionResult SaveTransfer(int bankAccountFromId, int budgetLineFromId,
-            int bankAccountToId, int budgetLineToId, decimal amount, string note)
+        public JsonResult SaveTransfer(int bankAccountId, int budgetLineFromId,
+            int budgetLineToId, decimal amount, string note)
         {
-            return Content(adminPresenter.SaveTransfer(bankAccountFromId, budgetLineFromId,
-                bankAccountToId, budgetLineToId, amount, note));
+            var isSuccess = false;
+            var messages = budgetService.SaveTransfer<Message>(bankAccountId, budgetLineFromId,
+                budgetLineToId, amount, note, out isSuccess);
+
+            var data = new
+            {
+                isSuccess,
+                messages = adminPresenter.GetSaveTransferMessages(messages),
+                budgetLinesFrom = isSuccess ? adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.From) : "",
+                budgetLinesTo = isSuccess ? adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.To) : ""
+            };
+
+            return Json(data);
         }
 
     }

@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Web;
-using System.Web.Caching;
 using System.Web.Mvc;
-using System.Web.Optimization;
 using System.Web.Routing;
 using System.Data.Entity;
 using AutoMapper;
-//using BudgetTools.AutoMapper;
 using BudgetTools.Classes;
 using BudgetToolsDAL.Contexts;
 using BudgetToolsDAL.Helpers;
@@ -37,21 +31,19 @@ namespace BudgetTools
 
             // the second call is probably redundant
             DataHelpers.DisableInitializers();
-            Database.SetInitializer<BudgetToolsDAL.Contexts.BudgetToolsDBContext>(null);
+            Database.SetInitializer<BudgetToolsDBContext>(null);
 
-            AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
-            BundleConfig.RegisterBundles(BundleTable.Bundles);
-            
-            //ValueProviderFactories.Factories.Add(new JsonValueProviderFactory());
-            //Template.TemplatePath = Server.MapPath(@"./Templates");
         }
 
         protected void Session_Start(Object sender, EventArgs e)
         {
+            // kluge for now
+            var budgetService = DependencyResolver.Current.GetService<IBudgetService>();
             var pageScope = new PageScope();
-            Session.Contents["pageScope"] = pageScope;
+            budgetService.SetPageScope<PageScope>(ref pageScope);
+            Session["pageScope"] = pageScope;
         }
 
         protected override IKernel CreateKernel()
@@ -63,11 +55,10 @@ namespace BudgetTools
 
         private void RegisterServices(IKernel kernel)
         {
-
+            // TODO: inject the mapper as an instance
             // TODO: move the mapping to the MapperConfig.cs file
             Mapper.Initialize(cfg => {
                 // TODO: move mapping to profiles
-                //cfg.AddProfile<AppProfile>();
                 cfg.CreateMissingTypeMaps = true;
                 cfg.CreateMap<BLLModels.StagedTransaction, DALModels.StagedTransaction>();
                 cfg.CreateMap<DALModels.Period, Option>()
@@ -90,6 +81,9 @@ namespace BudgetTools
                 cfg.CreateMap<DALModels.Message, Option>()
                     .ForMember(o => o.Text, c => c.MapFrom(d => d.MessageText))
                     .ForMember(o => o.Value, c => c.MapFrom(d => d.ErrorLevel));
+                cfg.CreateMap<DALModels.Message, Message>()
+                .ForMember(o => o.Text, c => c.MapFrom(d => d.MessageText))
+                .ForMember(o => o.Value, c => c.MapFrom(d => d.ErrorLevel));
             });
 
             // TODO: be sure to add unit tests to check the mappings
@@ -109,6 +103,7 @@ namespace BudgetTools
             kernel.Bind<ITemplateCache>().To<TemplateCache>().InSingletonScope();
             kernel.Bind<IWebCache>().To<WebCache>().InSingletonScope()
                 .WithConstructorArgument("cache", HttpRuntime.Cache);
+
         }
 
         private void LoadModules(IKernel kernel)

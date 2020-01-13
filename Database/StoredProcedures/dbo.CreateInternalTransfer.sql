@@ -3,9 +3,8 @@ IF OBJECT_ID('dbo.CreateInternalTransfer', 'P') IS NULL
 GO
 
 ALTER PROCEDURE dbo.CreateInternalTransfer
-    @BankAccountFromID int,
+    @BankAccountID int,
     @BudgetLineFromID int,
-    @BankAccountToID int,
     @BudgetLineToID int,
     @Amount money,
     @Note varchar(1024) = NULL
@@ -18,36 +17,34 @@ AS
 SET NOCOUNT ON
 
 DECLARE @CurrentPeriodID int;
+DECLARE @CurrentPeriodEndDate date;
+DECLARE @TransactionDate date;
 DECLARE @AccountChar varchar(10);
 DECLARE @DebitLineChar varchar(10);
 DECLARE @CreditLineChar varchar(10);
+DECLARE @TransactionDateChar char(8);
 
 DECLARE @ErrorMessages table
 (
     ErrorLevel int not null,
-    ErrorMessage varchar(1024)
+    MessageText varchar(1024)
 );
 
 BEGIN TRY
-
-    -- verify bank accounts match
-    IF COALESCE(@BankAccountFromID, @BankAccountToID + 1, -1) != COALESCE(@BankAccountToID, @BankAccountFromID + 1, -1)
-        INSERT INTO @ErrorMessages(ErrorLevel, ErrorMessage)
-        VALUES(16, 'Currently transfers are only allowed within the same bank account.');
 
     -- verify bank account exists
     IF NOT EXISTS
     (
         SELECT TOP 1 1
         FROM dbo.BankAccounts
-        WHERE BankAccountId = @BankAccountFromID
+        WHERE BankAccountId = @BankAccountID
     )
-        INSERT INTO @ErrorMessages(ErrorLevel, ErrorMessage)
+        INSERT INTO @ErrorMessages(ErrorLevel, MessageText)
         VALUES(16, 'Transfer failed. The bank account is invalid.');
 
     -- verify lines are different
-    IF COALESCE(@BudgetLineFromID, @BudgetLineToID + 1, -1) != COALESCE(@BudgetLineToID, @BudgetLineFromID + 1, -1)
-        INSERT INTO @ErrorMessages(ErrorLevel, ErrorMessage)
+    IF COALESCE(@BudgetLineFromID, @BudgetLineToID + 1, -1) = COALESCE(@BudgetLineToID, @BudgetLineFromID + 1, -1)
+        INSERT INTO @ErrorMessages(ErrorLevel, MessageText)
         VALUES(16, 'Cannot transfer from and to the same budget line.');
 
     -- verify budget lines exist
@@ -56,38 +53,46 @@ BEGIN TRY
         FROM dbo.BudgetLines
         WHERE BudgetLineId IN(@BudgetLineFromID, @BudgetLineToID)
     )
-        INSERT INTO @ErrorMessages(ErrorLevel, ErrorMessage)
+        INSERT INTO @ErrorMessages(ErrorLevel, MessageText)
         VALUES(16, 'Transfer failed. A budget line was invalid.');
 
     -- ensure the amount is > 0
     IF ISNULL(@Amount, 0.0) <= 0
-        INSERT INTO @ErrorMessages(ErrorLevel, ErrorMessage)
+        INSERT INTO @ErrorMessages(ErrorLevel, MessageText)
         VALUES(16, 'Transfer failed. The transfer amount must be greater than zero.');
 
     IF 0 < (SELECT COUNT(0) FROM @ErrorMessages)
         GOTO ExitProc;
 
     -- lookup current period
-    SELECT @CurrentPeriodId = MIN(PeriodId)
+    SELECT @CurrentPeriodId = MIN(PeriodId),
+        @CurrentPeriodEndDate = MIN(PeriodEndDate)
     FROM dbo.Periods
     WHERE IsOpen = 1;
 
+    -- set transaction date to be within the current period
+    SELECT @TransactionDate =
+        CASE
+            WHEN GETDATE() > @CurrentPeriodEndDate THEN @CurrentPeriodEndDate
+            ELSE GETDATE()
+        END;
+
     -- convert values
-    SELECT @AccountChar = CAST(@BankAccountFromID AS varchar)
-    SELECT @DebitLineChar = CAST(@BudgetLineFromID AS varchar)
-    SELECT @CreditLineChar = CAST(@BudgetLineToID AS varchar)
+    SELECT @AccountChar = CAST(@BankAccountID AS varchar);
+    SELECT @DebitLineChar = CAST(@BudgetLineFromID AS varchar);
+    SELECT @CreditLineChar = CAST(@BudgetLineToID AS varchar);
+    SELECT @TransactionDateChar = CONVERT(char(8), @TransactionDate, 112);
 
     BEGIN TRANSACTION
 
     -- write debit transaction
     INSERT INTO dbo.Transactions(BankAccountId, TransactionNo, TransactionDate,
       TransactionDesc, Amount, TransactionTypeCode, Recipient, Notes, IsMapped)
-    SELECT @BankAccountFromID, 
-      'IntXfer' + CONVERT(char(8), GETDATE(), 112) + '>' + @AccountChar
-        + '-' + @AccountChar + ':' + @DebitLineChar + '-' + @CreditLineChar + ':D',
-      CONVERT(char(8), GETDATE(), 112),
-      'Internal Transfer', -@Amount, 'I', 'Internal Transfer',
-      @Note, 1 AS IsMapped;
+    SELECT @BankAccountID, 
+        'IntXfer' + @TransactionDateChar + '>' + @AccountChar + '-' + @AccountChar
+            + ':' + @DebitLineChar + '-' + @CreditLineChar + ':D',
+        @TransactionDate, 'Internal Transfer', -@Amount, 'I', 'Internal Transfer', @Note,
+        1 AS IsMapped;
 
     -- add debit mapped transaction
     INSERT INTO dbo.MappedTransactions(TransactionId, BudgetLineId, Amount)
@@ -96,24 +101,23 @@ BEGIN TRY
     -- write credit transaction
     INSERT INTO dbo.Transactions(BankAccountId, TransactionNo, TransactionDate,
       TransactionDesc, Amount, TransactionTypeCode, Recipient, Notes, IsMapped)
-    SELECT @BankAccountToID,
-      'IntXfer' + CONVERT(char(8), GETDATE(), 112) + '>' + @AccountChar
-        + '-' + @AccountChar + ':' + @DebitLineChar + '-' + @CreditLineChar + ':C',
-      CONVERT(char(8), GETDATE(), 112),
-      'Internal Transfer', @Amount, 'I', 'Internal Transfer',
-      @Note, 1 AS IsMapped;
+    SELECT @BankAccountID,
+        'IntXfer' + @TransactionDateChar + '>' + @AccountChar + '-' + @AccountChar
+            + ':' + @DebitLineChar + '-' + @CreditLineChar + ':C',
+        @TransactionDate, 'Internal Transfer', @Amount, 'I', 'Internal Transfer', @Note,
+        1 AS IsMapped;
 
     -- add credit mapped transaction
     INSERT INTO dbo.MappedTransactions(TransactionId, BudgetLineId, Amount)
     SELECT SCOPE_IDENTITY(), @BudgetLineToID, @Amount;
 
     INSERT INTO dbo.PeriodAdjustments(PeriodID, BankAccountID, BudgetLineID, AdjustmentTypeCode, Amount)
-    VALUES(@CurrentPeriodId, @BankAccountFromID, @BudgetLineFromID, 'M', -@Amount),
-      (@CurrentPeriodId, @BankAccountToID, @BudgetLineToID, 'M', @Amount);
+    VALUES(@CurrentPeriodId, @BankAccountID, @BudgetLineFromID, 'M', -@Amount),
+        (@CurrentPeriodId, @BankAccountID, @BudgetLineToID, 'M', @Amount);
 
     COMMIT TRANSACTION
 
-    INSERT INTO @ErrorMessages(ErrorLevel, ErrorMessage)
+    INSERT INTO @ErrorMessages(ErrorLevel, MessageText)
     VALUES(0, 'Transfer succeeded.');
 
     ExitProc:
@@ -122,12 +126,14 @@ END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
 
-    INSERT INTO @ErrorMessages(ErrorLevel, ErrorMessage)
+    INSERT INTO @ErrorMessages(ErrorLevel, MessageText)
     VALUES(16, 'Transfer failed. A database error occurred.');
 END CATCH
 
-SELECT ErrorLevel, ErrorMessage
+SELECT ErrorLevel, MessageText
 FROM @ErrorMessages;
+
+RETURN ISNULL((SELECT MAX(ErrorLevel) FROM @ErrorMessages), 0);
 
 GO
 

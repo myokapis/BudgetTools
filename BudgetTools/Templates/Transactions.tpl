@@ -58,9 +58,11 @@
             <tbody>
                 <!-- @@EDITOR_ROWS@@ -->
                 <tr>
-                    <td><select>
-                        <!-- @@BUDGET_LINES@@ --><option value="@@VALUE@@" @@SELECTED@@>@@TEXT@@</option><!-- @@BUDGET_LINES@@ -->
-                    </select></td>
+                    <td>
+                        <select>
+                            <!-- @@BUDGET_LINES@@ --><option value="@@VALUE@@" @@SELECTED@@>@@TEXT@@</option><!-- @@BUDGET_LINES@@ -->
+                        </select>
+                    </td>
                     <td><input type="text" value = "@@Amount@@"/></td>
                 </tr>
                 <!-- @@EDITOR_ROWS@@ -->

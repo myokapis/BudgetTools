@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Entity;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Linq.Expressions;
 using AutoMapper;
 using BudgetToolsDAL.Contexts;
 using BudgetToolsDAL.Models;
@@ -13,21 +12,38 @@ namespace BudgetToolsDAL.Accessors
 
     public interface IBudgetToolsAccessor
     {
-        List<T> CloseCurrentPeriod<T>();
+        List<T> CloseCurrentPeriod<T>(out bool isSuccess);
+
+        void CreateAllocations(int periodId);
+
         BankAccount GetBankAccount(int bankAccountId);
+
         List<BankAccount> GetBankAccounts();
-        List<T> GetBudgetLineBalances<T>(int bankAccountId);
+
+        List<T> GetBudgetLineBalances<T>(int periodId, int bankAccountId);
+
         List<T> GetBudgetLineSet<T>(DateTime effectiveDate);
+
+        int GetCurrentPeriodId();
+
         List<T> GetPeriodBalances<T>(int periodId);
+
         List<PeriodBudgetLine> GetPeriodBudget(int PeriodId, int BankAccountId);
+
         List<Period> GetPeriods();
+
         T GetTransaction<T>(int transactionId);
+
         List<T> GetTransactions<T>(int bankAccountId, DateTime startDate, DateTime endDate);
+
         void SaveStagedTransactions<T>(int bankAccountId, List<T> stagedTransactions);
-        List<T> SaveTransfer<T>(int bankAccountFromId, int budgetLineFromId,
-            int bankAccountToId, int budgetLineToId, decimal amount, string note);
+
+        List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,
+            decimal amount, string note, out bool isSuccess);
+
         void UpdateBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount);
+
         void UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
             string notes, List<T> mappedTransactions);
     }
@@ -39,38 +55,52 @@ namespace BudgetToolsDAL.Accessors
 
         public BudgetToolsAccessor(IBudgetToolsDBContext budgetToolsDBContext)
         {
-            this.db = budgetToolsDBContext;
+            db = budgetToolsDBContext;
         }
 
-        public List<T> CloseCurrentPeriod<T>()
+        public List<T> CloseCurrentPeriod<T>(out bool isSuccess)
         {
-            var messages = db.Database.SqlQuery<Message>("exec dbo.uspUpdatePeriodBalances @ClosePeriod",
-                new SqlParameter("@ClosePeriod", true));
+            var periodId = GetCurrentPeriodId();
 
-            //// TODO: create allocations for new current period
-            ////       maybe update balances for the period as well
-            //if(messages.All(m => m.ErrorLevel == 0))
-            //{
-            //    db.Database.ExecuteSqlCommand()
-            //}
+            // ensure balances are up to date
+            var messages = UpdatePeriodBalances(periodId, out isSuccess)
+                .Select(m => Mapper.Map<T>(m)).ToList();
 
-            return messages.Select(m => Mapper.Map<T>(m)).ToList();
+            // bail out if processing failed
+            if (!isSuccess) return messages;
+
+            // attempt to close the period
+            var returnValue = ReturnValue;
+            messages = db.Database.SqlQuery<Message>("exec @ReturnValue = dbo.CloseCurrentPeriod", returnValue)
+                .Select(m => Mapper.Map<T>(m))
+                .ToList();
+
+            isSuccess = returnValue.Value.Equals(0);
+            return messages;
+        }
+
+        public void CreateAllocations(int periodId)
+        {
+            db.Database.ExecuteSqlCommand("exec dbo.uspCreateAllocations @PeriodId",
+                new SqlParameter("@PeriodId", periodId));
         }
 
         public BankAccount GetBankAccount(int bankAccountId)
         {
-            return this.db.BankAccounts.FirstOrDefault(a => a.BankAccountId == bankAccountId);
+            return db.BankAccounts.FirstOrDefault(a => a.BankAccountId == bankAccountId);
         }
 
         public List<BankAccount> GetBankAccounts()
         {
-            return this.db.BankAccounts.ToList();
+            return db.BankAccounts.ToList();
         }
 
-        public List<T> GetBudgetLineBalances<T>(int bankAccountId)
+        public List<T> GetBudgetLineBalances<T>(int periodId, int bankAccountId)
         {
+            bool isSuccess = false;
+
             // ensure balances are current
-            db.Database.ExecuteSqlCommand("dbo.uspUpdatePeriodBalances");
+            UpdatePeriodBalances(periodId, out isSuccess);
 
             // query budget line balances
             var budgetLines = db.Database.SqlQuery<BudgetLine>("exec dbo.GetBudgetLinesWithBalances @BankAccountId;",
@@ -88,11 +118,23 @@ namespace BudgetToolsDAL.Accessors
             return lines.Select(l => Mapper.Map<T>(l)).ToList();
         }
 
+        public int GetCurrentPeriodId()
+        {
+            return db.Periods
+                .Where(p => p.IsOpen)
+                .OrderBy(p => p.PeriodId)
+                .First().PeriodId;
+        }
+
         public List<T> GetPeriodBalances<T>(int periodId)
         {
+            bool isSuccess = false;
+
+            // ensure allocations are up to date
+            CreateAllocations(periodId);
+
             // ensure balances are up to date
-            db.Database.ExecuteSqlCommand("exec dbo.uspUpdatePeriodBalances @PeriodId",
-                new SqlParameter("@PeriodId", periodId));
+            UpdatePeriodBalances(periodId, out isSuccess);
 
             // get the balances
             var balances = db.PeriodBalances
@@ -129,9 +171,7 @@ namespace BudgetToolsDAL.Accessors
 
         public List<Period> GetPeriods()
         {
-
             return db.Periods.ToList();
-
         }
 
         public T GetTransaction<T>(int transactionId)
@@ -146,23 +186,80 @@ namespace BudgetToolsDAL.Accessors
         {
             var transactions = db.Transactions
                 .Where(t => t.BankAccountId == bankAccountId
-                    && t.TransactionDate >= startDate && t.TransactionDate <= endDate)
+                    && t.TransactionDate >= startDate
+                    && t.TransactionDate <= endDate
+                    && t.TransactionTypeCode != "I")
                 .ToList();
 
             return transactions.Select(t => Mapper.Map<T>(t)).ToList();
         }
 
+        private SqlParameter ReturnValue => new SqlParameter("@ReturnValue", SqlDbType.Int)
+        {
+            Direction = ParameterDirection.Output
+        };
+
+        public void SaveStagedTransactions<T>(int bankAccountId, List<T> stagedTransactions)
+        {
+            var st = stagedTransactions.Select(t => Mapper.Map<StagedTransaction>(t)).ToList();
+            db.DeleteStagedTransactions(bankAccountId);
+            db.StageTransactions.AddRange(st);
+            db.SaveChanges();
+            db.ImportTransactions(bankAccountId);
+        }
+
+        public List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,
+            decimal amount, string note, out bool isSuccess)
+        {
+            var returnValue = ReturnValue;
+
+            var paramNames = string.Join(", ", new string[]
+            {
+                "@BankAccountID",
+                "@BudgetLineFromID",
+                "@BudgetLineToID",
+                "@Amount",
+                "@Note"
+            });
+
+            var messages = db.Database.SqlQuery<Message>($"exec @ReturnValue = dbo.CreateInternalTransfer {paramNames}",
+                new SqlParameter("@BankAccountID", bankAccountId),
+                new SqlParameter("@BudgetLineFromID", budgetLineFromId),
+                new SqlParameter("@BudgetLineToID", budgetLineToId),
+                new SqlParameter("@Amount", amount),
+                new SqlParameter("@Note", note),
+                returnValue);
+
+            isSuccess = returnValue.Value.Equals(0);
+
+            return messages.Select(m => Mapper.Map<T>(m)).ToList();
+        }
+
         public void UpdateBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount)
         {
-            var allocation = this.db.Allocations.Single(a =>
+            var allocation = db.Allocations.Single(a =>
                 a.PeriodId == periodId && a.BudgetLineId == budgetLineId && a.BankAccountId == bankAccountId);
 
             allocation.PlannedAmount = plannedAmount;
             allocation.AllocatedAmount = allocatedAmount;
             allocation.AccruedAmount = accruedAmount;
 
-            this.db.SaveChanges();
+            db.SaveChanges();
+        }
+
+        private List<Message> UpdatePeriodBalances(int periodId, out bool isSuccess)
+        {
+            var returnValue = ReturnValue;
+
+            // ensure balances are up to date
+            var messages = db.Database.SqlQuery<Message>("exec @ReturnValue = dbo.UpdatePeriodBalances @PeriodId",
+                new SqlParameter("@PeriodId", periodId),
+                returnValue).ToList();
+
+            isSuccess = returnValue.Value.Equals(0);
+
+            return messages;
         }
 
         // TODO: change this pattern to accept a partial object and merge it into the existing object
@@ -172,7 +269,7 @@ namespace BudgetToolsDAL.Accessors
         {
 
             // get the transaction
-            var transaction = this.db.Transactions.First(t => t.TransactionId == transactionId);
+            var transaction = db.Transactions.First(t => t.TransactionId == transactionId);
 
             // set the transaction fields
             transaction.TransactionTypeCode = transactionTypeCode;
@@ -214,86 +311,8 @@ namespace BudgetToolsDAL.Accessors
                 }
             }
 
-            this.db.SaveChanges();
+            db.SaveChanges();
 
-        }
-
-        //public void SaveMappedTransactions<T>(List<T> mappedTransactions)
-        //{
-        //    // map the incoming data
-        //    var inData = mappedTransactions.Select(m => Mapper.Map<MappedTransaction>(m)).ToList();
-
-        //    // get the transaction id
-        //    var id = inData.FirstOrDefault()?.TransactionId;
-        //    if (id == null) return;
-
-        //    // get the existing data from the database
-        //    var dbData = this.db.MappedTransactions.Where(m => m.TransactionId == id.Value).ToList();
-
-        //    // get record counts
-        //    var dbCount = dbData.Count();
-        //    var inCount = inData.Count();
-        //    var recordCount = dbCount > inCount ? dbCount : inCount;
-
-        //    // merge the new data into the existing data
-        //    for(var i = 0; i < recordCount; i++)
-        //    {
-        //        if (dbCount > i)
-        //        {
-        //            var dbRecord = dbData[i];
-
-        //            if (inCount > i)
-        //            {
-        //                var inRecord = inData[i];
-        //                dbRecord.Amount = inRecord.Amount;
-        //                dbRecord.BudgetLineId = inRecord.BudgetLineId;
-        //            }
-        //            else
-        //            {
-        //                this.db.MappedTransactions.Remove(dbRecord);
-        //            }
-        //        }
-        //        else
-        //        {
-        //            var inRecord = inData[i];
-        //            this.db.MappedTransactions.Add(inRecord);
-        //        }
-        //    }
-
-        //    this.db.SaveChanges();
-        //}
-
-        public void SaveStagedTransactions<T>(int bankAccountId, List<T> stagedTransactions)
-        {
-            var st = stagedTransactions.Select(t => Mapper.Map<StagedTransaction>(t)).ToList();
-            this.db.DeleteStagedTransactions(bankAccountId);
-            this.db.StageTransactions.AddRange(st);
-            this.db.SaveChanges();
-            this.db.ImportTransactions(bankAccountId);
-        }
-
-        public List<T> SaveTransfer<T>(int bankAccountFromId, int budgetLineFromId,
-            int bankAccountToId, int budgetLineToId, decimal amount, string note)
-        {
-            var paramNames = string.Join(", ", new string[]
-            {
-                "@BankAccountFromID",
-                "@BudgetLineFromID",
-                "@BankAccountToID",
-                "@BudgetLineToID",
-                "@Amount",
-                "@Note"
-            });
-
-            var messages = db.Database.SqlQuery<Message>($"exec dbo.CreateInternalTransfer {paramNames}",
-                new SqlParameter("@BankAccountFromID", bankAccountFromId),
-                new SqlParameter("@BudgetLineFromID", budgetLineFromId),
-                new SqlParameter("@BankAccountToID", bankAccountToId),
-                new SqlParameter("@BudgetLineToID", budgetLineToId),
-                new SqlParameter("@Amount", amount),
-                new SqlParameter("@Note", note));
-
-            return messages.Select(m => Mapper.Map<T>(m)).ToList();
         }
 
     }

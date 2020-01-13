@@ -20,6 +20,8 @@ namespace BudgetTools.Models
         public decimal RemainingAmount { get; set; }
         [FormatCurrency(2)]
         public decimal AccruedBalance { get; set; }
+        [FormatCurrency(2)]
+        public decimal TotalCashAmount { get; set; }
         public bool IsAccrued { get; set; }
         public bool IsDetail { get; set; }
     }

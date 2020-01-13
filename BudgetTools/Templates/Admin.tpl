@@ -9,26 +9,26 @@
     <div class="menu-section-div">
         <p>Menu</p>
         <ul>
-            <li id="closeCurrentPeriod">Close Current Period</li>
-            <li id="transferBalance">Transfer Balance</li>
+            <li id="closeCurrentPeriod" val="1">Close Current Period</li>
+            <li id="transferBalance" val="2">Transfer Balance</li>
         </ul>
     </div>
     <div class="editor-section-div">
         <!-- @@EDITOR@@ -->
         <!-- @@CLOSE_PERIOD@@ -->
         <div>
-            <div>Close Current Period</div>
+            <div class="grid-label">Close Current Period</div>
             <button id="closePeriod">Close</button>
-            <table id="messages">
+            <table id="closePeriodMessages">
                 <thead>
                     <tr>
-                        <th>Messages</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                 <!-- @@MESSAGE@@ -->
                 <tr>
-                    <td>@@TEXT@@</td>
+                    <td>@@Text@@</td>
                 </tr>
                 <!-- @@MESSAGE@@ -->
                 </tbody>
@@ -40,9 +40,6 @@
             <!-- @@GRID_CONTAINER@@ -->
             <div class="grid-container">
                 <div class="grid-label">Transfer @@FROM_TO@@:</div>
-                <select id="bankAccount@@FROM_TO@@">
-                    <!-- @@ACCOUNT@@ --><option value="@@VALUE@@" @@SELECTED@@>@@TEXT@@</option><!-- @@ACCOUNT@@ -->
-                </select>
                 <table id="budgetLines@@FROM_TO@@" class="budgetLineTable">
                     <tbody>
                         <!-- @@ROW@@ -->
@@ -58,11 +55,11 @@
             <!-- @@GRID_CONTAINER@@ -->
             <div class="amount-container">
                 <div>
-                    <label>Amount</label>
+                    <label class="horizontalLabel">Transfer Amount</label>
                     <input id="amount" type="text" />
                 </div>
                 <div class="notes-container">
-                    <label>Notes</label>
+                    <label class="verticalLabel">Notes</label>
                     <textarea id="transferNotes" rows="5" cols="80"></textarea>
                 </div>
                 <div class="messages">
@@ -72,13 +69,13 @@
                     <table id="transferMessages">
                         <thead>
                             <tr>
-                                <th>Messages</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                         <!-- @@TRANSFER_MESSAGE@@ -->
                         <tr>
-                            <td>@@TEXT@@</td>
+                            <td>@@Text@@</td>
                         </tr>
                         <!-- @@TRANSFER_MESSAGE@@ -->
                         </tbody>

@@ -13,9 +13,9 @@ namespace BudgetToolsBLL.Services
     // TODO: decide if a mapper should be required for instantiating the service
     public interface IBudgetService
     {
-        List<T> CloseCurrentPeriod<T>();
+        List<T1> CloseCurrentPeriod<T1, T2>(ref T2 pageScope);
         List<T> GetBankAccounts<T>(bool activeOnly = false);
-        List<T> GetBudgetLineBalances<T>(int bankAccountId);
+        List<T> GetBudgetLineBalances<T>(int periodId, int bankAccountId);
         List<T> GetBudgetLineSet<T>(DateTime? effectiveDate = null);
         List<T> GetPeriodBudget<T>(int BankAccountId, int PeriodId);
         List<T> GetPeriodBalancesWithSummary<T>(int periodId);
@@ -25,10 +25,15 @@ namespace BudgetToolsBLL.Services
         List<T> GetTransactions<T>(int bankAccountId, int periodId);
         void ImportFile(int bankAccountId, Stream stream);
         void ImportTransactions(int bankAccountId, List<StagedTransaction> stagedTransactions);
+
         void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount);
-        List<T> SaveTransfer<T>(int bankAccountFromId, int budgetLineFromId,
-            int bankAccountToId, int budgetLineToId, decimal amount, string note);
+
+        List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId,
+            int budgetLineToId, decimal amount, string note, out bool isSuccess);
+
+        void SetPageScope<T>(ref T pageScope);
+
         void UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
             string notes, List<T> mappedTransactions);
     }
@@ -42,9 +47,18 @@ namespace BudgetToolsBLL.Services
             this.budgetToolsAccessor = budgetToolsRepository;
         }
 
-        public List<T> CloseCurrentPeriod<T>()
+        public List<T1> CloseCurrentPeriod<T1, T2>(ref T2 pageScope)
         {
-            return budgetToolsAccessor.CloseCurrentPeriod<T>();
+            var dataScope = Mapper.Map<DataScope>(pageScope);
+            var data = budgetToolsAccessor.CloseCurrentPeriod<T1>(out bool isSuccess);
+
+            if(isSuccess)
+            {
+                SetPageScope(ref pageScope);
+                budgetToolsAccessor.CreateAllocations(dataScope.CurrentPeriodId);
+            }
+            
+            return data;
         }
 
         public List<T> GetBankAccounts<T>(bool activeOnly = false)
@@ -54,14 +68,14 @@ namespace BudgetToolsBLL.Services
                 .Select(a => Mapper.Map<T>(a)).ToList();
         }
 
-        public List<T> GetBudgetLineBalances<T>(int bankAccountId)
+        public List<T> GetBudgetLineBalances<T>(int periodId, int bankAccountId)
         {
-            return budgetToolsAccessor.GetBudgetLineBalances<T>(bankAccountId);
+            return budgetToolsAccessor.GetBudgetLineBalances<T>(periodId, bankAccountId);
         }
 
         public List<T> GetBudgetLineSet<T>(DateTime? effectiveDate = null)
         {
-            return this.budgetToolsAccessor.GetBudgetLineSet<T>(effectiveDate ?? DateTime.Now);
+            return budgetToolsAccessor.GetBudgetLineSet<T>(effectiveDate ?? DateTime.Now);
         }
 
         public List<T> GetPeriodBalancesWithSummary<T>(int periodId)
@@ -124,6 +138,7 @@ namespace BudgetToolsBLL.Services
 
         }
 
+        // TODO: refactor this to use a bll model and get a generic collection from the dal
         public List<T> GetPeriodBudgetWithSummary<T>(int bankAccountId, int periodId)
         {
 
@@ -139,6 +154,7 @@ namespace BudgetToolsBLL.Services
                     l.ActualAmount,
                     l.RemainingAmount,
                     l.AccruedBalance,
+                    l.TotalCashAmount,
                     l.IsAccrued,
                     IsDetail = true
                 }).ToList();
@@ -155,6 +171,7 @@ namespace BudgetToolsBLL.Services
                     ActualAmount = g.Sum(l => l.ActualAmount),
                     RemainingAmount = g.Sum(l => l.RemainingAmount),
                     AccruedBalance = g.Sum(l => l.AccruedBalance),
+                    TotalCashAmount = g.Sum(l => l.TotalCashAmount),
                     IsAccrued = false,
                     IsDetail = false,
                 });
@@ -186,6 +203,8 @@ namespace BudgetToolsBLL.Services
             return budgetToolsAccessor.GetTransactions<T>(bankAccountId, startDate, endDate);
         }
 
+        // TODO: move upload validator check into file parser. just pass in the value to check
+        //       make this a boolean method
         public void ImportFile(int bankAccountId, Stream stream)
         {
             var (uploadValidator, stagedTransactions) = ParseFile(bankAccountId, stream);
@@ -202,21 +221,35 @@ namespace BudgetToolsBLL.Services
 
         public void ImportTransactions(int bankAccountId, List<StagedTransaction> stagedTransactions)
         {
-            this.budgetToolsAccessor.SaveStagedTransactions<StagedTransaction>(bankAccountId, stagedTransactions);
+            budgetToolsAccessor.SaveStagedTransactions<StagedTransaction>(bankAccountId, stagedTransactions);
         }
 
         public void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount)
         {
-            this.budgetToolsAccessor.UpdateBudgetLine(periodId, budgetLineId, bankAccountId,
+            budgetToolsAccessor.UpdateBudgetLine(periodId, budgetLineId, bankAccountId,
                 plannedAmount, allocatedAmount, accruedAmount);
         }
 
-        public List<T> SaveTransfer<T>(int bankAccountFromId, int budgetLineFromId,
-            int bankAccountToId, int budgetLineToId, decimal amount, string note)
+        public List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId,
+            int budgetLineToId, decimal amount, string note, out bool isSuccess)
         {
-            return budgetToolsAccessor.SaveTransfer<T>(bankAccountFromId, budgetLineFromId,
-                bankAccountToId, budgetLineToId, amount, note);
+            return budgetToolsAccessor.SaveTransfer<T>(bankAccountId, budgetLineFromId,
+                budgetLineToId, amount, note, out isSuccess);
+        }
+
+        public void SetPageScope<T>(ref T pageScope)
+        {
+            var dataScope = Mapper.Map<DataScope>(pageScope);
+            var currentPeriodId = budgetToolsAccessor.GetCurrentPeriodId();
+
+            if (dataScope.BankAccountId <= 0)
+                dataScope.BankAccountId = budgetToolsAccessor.GetBankAccounts().First().BankAccountId;
+
+            dataScope.CurrentPeriodId = currentPeriodId;
+            if (dataScope.PeriodId < currentPeriodId) dataScope.PeriodId = currentPeriodId;
+
+            Mapper.Map(dataScope, pageScope);
         }
 
         public void UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
@@ -228,13 +261,14 @@ namespace BudgetToolsBLL.Services
             var dups = mappedXacts.GroupBy(x => x.BudgetLineId).Select(g => g.Count()).Where(c => c > 1).ToList();
             if (dups.Count() > 0) throw new ArgumentException("Only one mapped transaction id may be saved for each budget line.");
 
-            this.budgetToolsAccessor.UpdateTransaction<T>(transactionId, transactionTypeCode, recipient, notes,
+            budgetToolsAccessor.UpdateTransaction<T>(transactionId, transactionTypeCode, recipient, notes,
                 mappedTransactions);
 
         }
 
         #region Protected Methods
-
+        // TODO: move these into a file parser class along with all the junk in StagedTransaction.
+        //       better design plus some day i may have another bank account that has a different export format
         protected (string UploadValidator, List<StagedTransaction> StagedTransactions) ParseFile(int bankAccountId, Stream stream)
         {
             int skipLines = 4;
@@ -250,6 +284,7 @@ namespace BudgetToolsBLL.Services
                     var line = reader.ReadLine();
                     lineNo++;
 
+                    // TODO: bail out here if validator is false
                     if (lineNo == 2) fileValidator = ParseValidator(line);
 
                     if (lineNo > skipLines)

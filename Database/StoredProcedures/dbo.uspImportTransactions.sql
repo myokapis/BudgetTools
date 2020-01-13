@@ -13,9 +13,12 @@ begin try
     begin transaction;
 
     insert into dbo.Transactions(BankAccountId, TransactionNo, TransactionDate,
-        TransactionDesc, CheckNo, Amount, TransactionTypeCode, IsMapped)
+        TransactionDesc, CheckNo, Amount, TransactionTypeCode, IsMapped, Balance)
     select st.BankAccountId, st.TransactionNo, st.TransactionDate,
-        st.TransactionDesc, st.CheckNo, st.Amount, 'S' as TransactionTypeCode, 0 as IsMapped
+        st.TransactionDesc, st.CheckNo, st.Amount,
+        'S' as TransactionTypeCode,
+        0 as IsMapped,
+        st.Balance
     from dbo.StagedTransactions st
     left join dbo.Transactions t on st.BankAccountId = t.BankAccountId
         and st.TransactionNo = t.TransactionNo

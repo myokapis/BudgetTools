@@ -29,6 +29,9 @@ namespace BudgetToolsDAL.Models
         [Column(TypeName = "money")]
         public decimal AccruedBalance { get; set; }
 
+        [Column(TypeName = "money")]
+        public decimal TotalCashAmount { get; set; }
+
         public bool IsAccrued { get; set; }
     }
 

@@ -30,7 +30,7 @@ namespace BudgetTools.Presenters
             // setup master page and the content page section providers
             var writer = SetupMasterPage("HEAD", "BODY");
             var selectorWriter = GetTemplateWriter("Common.tpl").GetWriter("SELECTOR");
-            this.contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
+            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
 
             writer.SelectProvider("HEAD");
             writer.AppendSection(true);

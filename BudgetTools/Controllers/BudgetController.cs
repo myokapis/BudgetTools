@@ -20,13 +20,6 @@ namespace BudgetTools.Controllers
 
         public ActionResult Index()
         {
-            var pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            if (pageScope.BankAccountId == 0)
-            {
-                pageScope.BankAccountId = 1;
-                pageScope.PeriodId = int.Parse(DateTime.Now.ToString("yyyyMM"));
-            }
-
             return Content(budgetPresenter.GetPage());
         }
 
@@ -49,7 +42,7 @@ namespace BudgetTools.Controllers
         public void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount)
         {
-            this.budgetService.SaveBudgetLine(periodId, budgetLineId, bankAccountId,
+            budgetService.SaveBudgetLine(periodId, budgetLineId, bankAccountId,
                 plannedAmount, allocatedAmount, accruedAmount);
         }
 

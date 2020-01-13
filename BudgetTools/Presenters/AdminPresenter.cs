@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using BudgetTools.Classes;
 using BudgetTools.Enums;
 using BudgetTools.Models;
@@ -10,13 +11,12 @@ namespace BudgetTools.Presenters
 
     public interface IAdminPresenter
     {
-        string CloseCurrentPeriod();
         string GetBalanceTransfer();
         string GetCloseCurrentPeriod();
+        string GetCloseCurrentPeriodMessages(IEnumerable<Message> messages);
+        string GetSaveTransferMessages(IEnumerable<Message> messages);
         string GetTransferBudgetLines(int bankAccountId, Direction direction);
         string GetPage();
-        string SaveTransfer(int bankAccountFromId, int budgetLineFromId,
-            int bankAccountToId, int budgetLineToId, decimal amount, string note);
     }
 
     public class AdminPresenter : MasterPresenter, IAdminPresenter
@@ -33,30 +33,20 @@ namespace BudgetTools.Presenters
             contentWriter = GetTemplateWriter("Admin.tpl");
         }
 
-        public string CloseCurrentPeriod()
-        {
-            var data = budgetService.CloseCurrentPeriod<Option>();
-            var writer = contentWriter.GetWriter("MESSAGE", true);
-            writer.SetMultiSectionFields(data);
-            return writer.GetContent();
-        }
-
         public string GetBalanceTransfer()
         {
             var writer = contentWriter.GetWriter("TRANSFER_BALANCE", true);
             var sectionNames = new string[] { "From", "To" };
-            var bankAccounts = this.budgetService.GetBankAccounts<Option>(true);
-            var bankAccountId = int.Parse(bankAccounts.First().Value); // TODO: cache bank accounts and budget lines
 
-            var budgetLines = budgetService.GetBudgetLineBalances<BudgetLineBalance>((int)bankAccountId)
+            var budgetLines =
+                budgetService.GetBudgetLineBalances<BudgetLineBalance>(pageScope.PeriodId, pageScope.BankAccountId)
                 .OrderBy(l => l.BudgetLineName);
 
             // set the From and To sections
-            foreach(var sectionName in sectionNames)
+            foreach (var sectionName in sectionNames)
             {
                 writer.SelectSection("GRID_CONTAINER");
                 writer.SetField("FROM_TO", sectionName);
-                writer.SetOptionFields("ACCOUNT", bankAccounts, bankAccounts.First().Value);
                 writer.SetMultiSectionFields("ROW", sectionName == "To" ? budgetLines :
                     budgetLines.Where(b => b.Balance > 0m));
                 writer.AppendSection(true);
@@ -73,40 +63,46 @@ namespace BudgetTools.Presenters
             return writer.GetContent();
         }
 
+        public string GetCloseCurrentPeriodMessages(IEnumerable<Message> messages)
+        {
+            var writer = contentWriter.GetWriter("MESSAGE", true);
+            writer.SetMultiSectionFields(messages);
+            return writer.GetContent();
+        }
+
         public string GetPage()
         {
             var writer = SetupMasterPage("HEAD", "BODY");
+            var selectorWriter = GetTemplateWriter("Common.tpl").GetWriter("SELECTOR");
+            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
 
             writer.SelectProvider("HEAD");
             writer.AppendSection(true);
 
             writer.SelectProvider("BODY");
+            writer.SelectProvider("SELECTOR");
+            GetSelector(writer);
             writer.AppendAll();
 
+            return writer.GetContent();
+        }
+
+        public string GetSaveTransferMessages(IEnumerable<Message> messages)
+        {
+            var writer = contentWriter.GetWriter("TRANSFER_MESSAGE", true);
+            writer.SetMultiSectionFields(messages);
             return writer.GetContent();
         }
 
         public string GetTransferBudgetLines(int bankAccountId, Direction direction)
         {
             var writer = contentWriter.GetWriter("ROW", true);
-
-            var budgetLines = budgetService.GetBudgetLineBalances<BudgetLineBalance>((int)bankAccountId)
+            var budgetLines =
+                budgetService.GetBudgetLineBalances<BudgetLineBalance>(pageScope.CurrentPeriodId, bankAccountId)
                 .Where(b => direction == Direction.To || b.Balance > 0m)
                 .OrderBy(l => l.BudgetLineName);
 
             writer.SetMultiSectionFields(budgetLines);
-            //writer.AppendAll();
-            return writer.GetContent();
-        }
-
-        public string SaveTransfer(int bankAccountFromId, int budgetLineFromId,
-            int bankAccountToId, int budgetLineToId, decimal amount, string note)
-        {
-            var data = budgetService.SaveTransfer<Option>(bankAccountFromId, budgetLineFromId,
-                bankAccountToId, budgetLineToId, amount, note);
-
-            var writer = contentWriter.GetWriter("TRANSFER_MESSAGE", true);
-            writer.SetMultiSectionFields(data);
             return writer.GetContent();
         }
 

@@ -10,7 +10,6 @@ namespace BudgetTools.Presenters
     public interface IImportPresenter
     {
         string GetPage();
-        string GetTransactionRows();
     }
 
     public class ImportPresenter : MasterPresenter, IImportPresenter
@@ -25,17 +24,10 @@ namespace BudgetTools.Presenters
             contentWriter = GetTemplateWriter("Import.tpl");
         }
 
-        public string GetTransactionRows()
-        {
-            var writer = contentWriter.GetWriter("ROW");
-            GetTransactionRows(writer);
-            return writer.GetContent();
-        }
-
-        public void GetTransactionRows(ITemplateWriter writer)
+        protected void GetBankAccountRows(ITemplateWriter writer)
         {
             var data = this.budgetService.GetBankAccounts<BankAccount>().Where(a => a.IsActive);
-            writer.SetMultiSectionFields<BankAccount>(data);
+            writer.SetMultiSectionFields("ROW", data);
         }
 
         public string GetPage()
@@ -45,8 +37,7 @@ namespace BudgetTools.Presenters
             writer.AppendSection(true);
 
             writer.SelectProvider("BODY");
-            writer.SelectSection("ROW");
-            GetTransactionRows(writer);
+            GetBankAccountRows(writer);
             writer.AppendAll();
 
             return writer.GetContent();

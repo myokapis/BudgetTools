@@ -100,12 +100,11 @@ namespace BudgetToolsDAL.Contexts
             }
         }
 
-        void IBudgetToolsDBContext.SaveChanges() => this.SaveChanges();
+        void IBudgetToolsDBContext.SaveChanges() => SaveChanges();
 
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
-            //modelBuilder.Entity<BudgetLine>().Map(model => { model.MapInheritedProperties(); model.ToTable("vwBudgetLineSets"); });
             modelBuilder.Entity<PeriodBalance>().Map(model => { model.MapInheritedProperties(); model.ToTable("vwPeriodBalances"); });
         }
 

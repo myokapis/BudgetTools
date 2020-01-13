@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
-namespace BudgetTools.Enums
+﻿namespace BudgetTools.Enums
 {
 
     public enum Direction

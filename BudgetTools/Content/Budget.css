@@ -70,7 +70,8 @@
 }
 
 #budgetLines {
-    height: 90%;
+    overflow: hidden;
+    width: 100%;
 }
 
 #budgetLines td {

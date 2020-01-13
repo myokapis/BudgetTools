@@ -5,7 +5,7 @@
 });
 
 function bindEvents() {
-    $("#budgetLines input").change(updateRow);
+    $("#budgetLines").on("change", "input", updateRow);
     $("#bankAccountId").change(changeBankAccount);
     $("#periodId").change(changePeriod);
 }
@@ -82,7 +82,7 @@ function updateRow(event) {
         data: JSON.stringify(data),
         dataType: 'html',
         contentType: 'application/json; charset=utf-8',
-        success: function (data, textStatus, jqXHR) {
+        success: function() {
             updateCategoryTotals(field);
             updateGrandTotals();
         },
@@ -119,13 +119,13 @@ function updateCategoryTotals(elem) {
     var details = trs.filter("[data-type!='summary']");
     
     // initialize totals array
-    var totals = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    var totals = Array(7).fill(0.0); //[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
     // loop through each detail record and update the totals array
     for (var i = 0; i < details.length; i++) {
         var row = new Row($(details[i]));
 
-        for (var j = 0; j < 6; j++)
+        for (var j = 0; j < 7; j++)
         {
             totals[j] = totals[j] + row.cellValues[j];
         }
@@ -142,13 +142,13 @@ function updateCategoryTotals(elem) {
 }
 
 function updateGrandTotals() {
-    var totals = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    var totals = Array(7).fill(0.0); //[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
     var summaryHeaders = $("[data-type='summary']");
 
     for (i = 0; i < summaryHeaders.length; i++) {
         var amounts = $(summaryHeaders[i]).find("td");
 
-        for (j = 0; j < 6; j++) {
+        for (j = 0; j < 7; j++) {
             var amount = getNumber($(amounts[j + 1]).text());
             totals[j] = totals[j] + amount;
         }
@@ -156,7 +156,7 @@ function updateGrandTotals() {
 
     var totalCells = $(".totals-div").find("div");
 
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < 7; i++) {
         setCurrency($(totalCells[i + 1]), totals[i]);
     }
 }
@@ -202,9 +202,13 @@ function Row(elem, adjustValues) {
         // recalculate the remaining amount
         this.cellValues[4] = this.cellValues[0] - this.cellValues[3];
 
+        // recalculate the total cash
+        var cashAdj = this.cellValues[2] <= 0.0 ? 0.0 : this.cellValues[2];
+        this.cellValues[6] = this.cellValues[1] + cashAdj;
+
         // update the cell text
-        for (var i = 0; i < 5; i++) {
-            if (i === 3) continue;
+        for (var i = 0; i < 7; i++) {
+            if (i === 3 || i === 5) continue;
             setCurrency(this.cells[i], this.cellValues[i]);
         }
 
@@ -230,81 +234,3 @@ function Row(elem, adjustValues) {
     if (adjustValues) this.adjustValues(index);
 
 }
-
-/*
-function getValue(elemPrefix, budgetLineId) {
-  var elemName = '#' + elemPrefix + '_' + budgetLineId.toString();
-  var elem = $(elemName);
-  var elemVal = (elem.val() || elem.html() || 0.00);
-  var sign = (elemVal.toString().substr(0, 1) == '(') ? -1 : 1;
-  var exp = new RegExp("[($),]", "gi");
-  var val = elemVal.toString().replace(exp, '');
-  return parseFloat(val) * sign;
-}
-
-function getRowData(elem, typeName) {
-  try{
-    var cell = elem.parentNode;
-    var row = cell.parentNode;
-    var body = row.parentNode;
-    var budgetLineId = row.id.toString().replace('tr_', '');
-    var budgetLineString = budgetLineId.toString();
-    var accruedAmount = getValue('accrued', budgetLineId);
-    var allocatedAmount = getValue('allocated', budgetLineId);
-    var plannedAmount = getValue('planned', budgetLineId);
-    var accruedBalance = getValue('td_balance', budgetLineId);
-
-    if (typeName == 'planned'){
-      allocatedAmount = plannedAmount - accruedAmount;
-    }
-    else if (typeName == 'allocated'){
-      plannedAmount = allocatedAmount + accruedAmount
-    }
-    else{
-        plannedAmount = allocatedAmount + accruedAmount;
-    }
-
-    var selectedValue = $('#BankAccountId :selected').val();
-
-    var data = {
-      BudgetLineId: budgetLineId,
-      BankAccountId: selectedValue,
-      AccruedAmount: accruedAmount,
-      AllocatedAmount: allocatedAmount,
-      PlannedAmount: plannedAmount
-    }
-
-    $.ajax({
-      url: buildUrl('Budget/SaveBudgetLine'),
-      type: "POST",
-      data: JSON.stringify(data),
-      dataType: 'html',
-      contentType: 'application/json; charset=utf-8',
-      success: function (data2) {
-        body.innerHTML = data2;
-      },
-      error: function (xhr, textStatus, errorThrown) {
-        alert('Error: ' + xhr.statusText);
-        alert(errorThrown);
-        alert(xhr.responseText);
-      },
-      async: false
-    });
-  }
-  catch (e) {
-    alert(e.message);
-  }
-}
-
-function handleAccruedClick(elem) {
-  getRowData(elem, 'accrued');
-}
-
-function handleAllocatedClick(elem) {
-  getRowData(elem, 'allocated');
-}
-
-function handlePlannedClick(elem) {
-  getRowData(elem, 'planned');
-}
-*/

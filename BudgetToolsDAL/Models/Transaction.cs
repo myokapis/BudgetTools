@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -11,8 +9,8 @@ namespace BudgetToolsDAL.Models
   {
     public Transaction()
     {
-      this.TransactionTypeCode = "S";
-      this.IsMapped = false;
+      TransactionTypeCode = "S";
+      IsMapped = false;
     }
 
     [Key]
@@ -38,6 +36,5 @@ namespace BudgetToolsDAL.Models
     [Required]
     public bool IsMapped { get; set; }
     public virtual List<MappedTransaction> MappedTransactions { get; set; }
-    //public virtual BudgetLine BudgetLine { get; set; }
   }
 }

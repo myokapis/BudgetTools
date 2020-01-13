@@ -38,17 +38,24 @@ and t.TransactionDate < dateadd(day, 1, @PeriodEndDate)
 and t.BankAccountId = @BankAccountId
 group by BudgetLineId;
 
+-- return the budget for the period
 select a.BudgetLineId, bl.BudgetLineName, bl.BudgetCategoryName,
     a.PlannedAmount, a.AllocatedAmount, a.AccruedAmount,
     isnull(t.Amount, 0.0) as ActualAmount,
     a.PlannedAmount - isnull(t.Amount, 0.0) as RemainingAmount,
-    isnull(-pb.Balance, 0.0) as AccruedBalance,
+    isnull(pb.Balance, 0.0) as AccruedBalance,
+    case
+        when bl.BudgetGroupName != 'Expenses' then a.AllocatedAmount
+        when bl.IsAccrued = 0 then a.AllocatedAmount
+        when a.AccruedAmount >= 0.0 then a.AllocatedAmount
+        else a.AllocatedAmount + -a.AccruedAmount
+    end as TotalCashAmount,
     bl.IsAccrued
 from dbo.Allocations a
 inner join dbo.vwBudgetGroupCategoryLine bl on a.BudgetLineId = bl.BudgetLineId
-left join dbo.PeriodBalances pb on a.PeriodId = pb.PeriodId
-    and a.BudgetLineId = pb.BudgetLineId
+left join dbo.PeriodBalances pb on a.BudgetLineId = pb.BudgetLineId
     and a.BankAccountId = pb.BankAccountId
+    and pb.PeriodId = @PreviousPeriodId
 left join @Transactions t on a.BudgetLineId = t.BudgetLineId
 where a.PeriodId = @PeriodId
 and a.BankAccountId = @BankAccountId;

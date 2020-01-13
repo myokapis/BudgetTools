@@ -22,14 +22,6 @@ namespace BudgetTools.Controllers
 
         public ActionResult Index()
         {
-            // TODO: create a base controller and move this to a method on the base
-            var pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            if (pageScope.BankAccountId == 0)
-            {
-                pageScope.BankAccountId = 1;
-                pageScope.PeriodId = int.Parse(DateTime.Now.ToString("yyyyMM"));
-            }
-
             return Content(this.transactionsPresenter.GetPage());
         }
 
@@ -63,7 +55,7 @@ namespace BudgetTools.Controllers
 
         public JsonResult GetTransaction(int transactionId)
         {
-            var transaction = this.budgetService.GetTransaction<Transaction>(transactionId);
+            var transaction = budgetService.GetTransaction<Transaction>(transactionId);
 
             var data = new
             {
@@ -86,7 +78,7 @@ namespace BudgetTools.Controllers
         public void UpdateTransaction(int transactionId, string transactionTypeCode, string recipient,
             string notes, List<MappedTransaction> mappedTransactions)
         {
-            this.budgetService.UpdateTransaction(transactionId, transactionTypeCode, recipient, notes,
+            budgetService.UpdateTransaction(transactionId, transactionTypeCode, recipient, notes,
                 mappedTransactions);
         }
 

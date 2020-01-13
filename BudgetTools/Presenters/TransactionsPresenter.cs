@@ -61,7 +61,7 @@ namespace BudgetTools.Presenters
                 new List<Option>
                 {
                     new Option(){ Text = "Standard", Value = "S" },
-                    new Option(){ Text = "Transfer", Value = "T" }
+                    new Option(){ Text = "Transfer", Value = "X" }
                 }));
 
             // set up a default mapped transaction
@@ -79,7 +79,6 @@ namespace BudgetTools.Presenters
             }
 
             writer.DeselectSection();
-            //writer.AppendSection();
         }
 
         public string GetPage()
@@ -94,7 +93,6 @@ namespace BudgetTools.Presenters
             writer.SelectProvider("BODY");
             writer.SelectProvider("SELECTOR");
             GetSelector(writer);
-            //writer.AppendSection(true);
 
             writer.SelectSection("ROW");
             GetTransactionRows(writer);
@@ -110,7 +108,6 @@ namespace BudgetTools.Presenters
         public string GetTransactionRows()
         {
             var writer = contentWriter.GetWriter("ROW");
-            //writer.SelectSection("ROW");
             GetTransactionRows(writer);
             return writer.GetContent();
         }

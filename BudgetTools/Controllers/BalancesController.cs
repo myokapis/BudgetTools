@@ -1,5 +1,4 @@
-﻿using System;
-using System.Web.Mvc;
+﻿using System.Web.Mvc;
 using BudgetTools.Classes;
 using BudgetTools.Presenters;
 using BudgetToolsBLL.Services;
@@ -19,21 +18,12 @@ namespace BudgetTools.Controllers
 
         public ActionResult ChangePeriod(int periodId)
         {
-            IPageScope pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            pageScope.PeriodId = periodId;
-
+            (Session["pageScope"] as IPageScope).PeriodId = periodId;
             return Content(balancesPresenter.GetTransactionRows());
         }
 
         public ActionResult Index()
         {
-            var pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            if (pageScope.BankAccountId == 0)
-            {
-                pageScope.BankAccountId = 1;
-                pageScope.PeriodId = int.Parse(DateTime.Now.ToString("yyyyMM"));
-            }
-
             return Content(balancesPresenter.GetPage());
         }
 

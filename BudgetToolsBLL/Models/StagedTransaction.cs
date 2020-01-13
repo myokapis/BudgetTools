@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace BudgetToolsBLL.Models
 {
-
+    // TODO: consider making this another DTO and moving the logic to an appropriate place
     public class StagedTransaction
     {
 
@@ -12,7 +12,8 @@ namespace BudgetToolsBLL.Models
 
         public StagedTransaction(int bankAccountId, string[] data)
         {
-            this.Amount = int.TryParse(GetValue(data[4], data[5], data[8]), out var amount) ? amount : 0d;
+            this.Amount = double.TryParse(GetValue(data[4], data[5], data[8]), out var amount) ? amount : 0d;
+            this.Balance = double.TryParse(data[6], out var balance) ? balance : 0d;
             this.BankAccountId = bankAccountId;
             this.CheckNo = string.IsNullOrWhiteSpace(data[7]) ? new int?() : int.Parse(data[7]);
             this.TransactionDate = DateTime.Parse(data[1]);
@@ -21,6 +22,7 @@ namespace BudgetToolsBLL.Models
         }
 
         public double Amount { get; set; }
+        public double Balance { get; set; }
         public int BankAccountId { get; set; }
         public int? CheckNo { get; set; }
         public DateTime TransactionDate { get; set; }

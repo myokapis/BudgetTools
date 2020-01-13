@@ -6,6 +6,7 @@ BaseData(BankAccountID, UploadValidator) as
     union all select 3, '920156438K77'
     union all select 6, '920336884K75'
     union all select 7, '920336884S00'
+    union all select 8, '920448085K75'
     union all select 9, '920448085S00'
 )
 update a

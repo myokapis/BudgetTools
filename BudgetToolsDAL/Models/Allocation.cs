@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BudgetToolsDAL.Models
@@ -23,10 +19,5 @@ namespace BudgetToolsDAL.Models
     public decimal AccruedAmount { get; set; }
 
     public virtual BudgetLine BudgetLine { get; set;  }
-
-    //[Association("Period", "PeriodId", "PeriodId")]
-    //public Period Period { get; set; }
-    //[Association("BudgetLine", "BudgetLineId", "BudgetLineId")]
-    //public BudgetLine BudgetLine { get; set; }
   }
 }

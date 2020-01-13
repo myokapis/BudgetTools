@@ -169,7 +169,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="App_Start\MapperConfig.cs" />
     <Compile Include="Classes\Enums.cs" />
     <Compile Include="Classes\PageScope.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
@@ -189,10 +188,10 @@
     <Compile Include="Models\BankAccount.cs" />
     <Compile Include="Models\BudgetLineBalance.cs" />
     <Compile Include="Models\MappedTransaction.cs" />
+    <Compile Include="Models\Message.cs" />
     <Compile Include="Models\PeriodBalance.cs" />
     <Compile Include="Models\PeriodBudgetLine.cs" />
     <Compile Include="Models\Transaction.cs" />
-    <Compile Include="Models\UploadPath.cs" />
     <Compile Include="Presenters\AdminPresenter.cs" />
     <Compile Include="Presenters\BalancesPresenter.cs" />
     <Compile Include="Presenters\TransactionsPresenter.cs" />

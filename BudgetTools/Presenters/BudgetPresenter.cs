@@ -27,8 +27,9 @@ namespace BudgetTools.Presenters
 
         public string GetTransactionRows()
         {
-            var writer = contentWriter.GetWriter("ROWS");
+            var writer = contentWriter.GetWriter("TBODY", true);
             GetTransactionRows(writer);
+            writer.AppendAll();
             return writer.GetContent();
         }
 
@@ -44,10 +45,10 @@ namespace BudgetTools.Presenters
 
             foreach (var record in records)
             {
+                writer.SelectSection("ROWS");
                 var sectionName = !record.IsDetail ? "ROW_S" : record.IsAccrued ? "ROW_A" : "ROW_D";
                 writer.SetSectionFields(sectionName, record, SectionOptions.AppendDeselect);
                 writer.AppendSection(true);
-                writer.SelectSection("ROWS");
             }
 
         }
@@ -57,7 +58,7 @@ namespace BudgetTools.Presenters
             // setup master page and the content page section providers
             var writer = SetupMasterPage("HEAD", "BODY");
             var selectorWriter = GetTemplateWriter("Common.tpl").GetWriter("SELECTOR");
-            this.contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
+            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
 
             // TODO: include a sectionoptions param in SelectProvider and use it to simplify this to a one liner
             writer.SelectProvider("HEAD");
@@ -66,7 +67,7 @@ namespace BudgetTools.Presenters
             writer.SelectProvider("BODY");
             writer.SelectProvider("SELECTOR");
             GetSelector(writer);
-            writer.SelectSection("ROWS");
+            writer.SelectSection("TBODY");
             GetTransactionRows(writer);
             writer.AppendAll();
 
