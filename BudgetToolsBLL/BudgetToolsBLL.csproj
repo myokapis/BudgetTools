@@ -48,6 +48,7 @@
     <Compile Include="Models\DataScope.cs" />
     <Compile Include="Models\PeriodBalance.cs" />
     <Compile Include="Models\MappedTransaction.cs" />
+    <Compile Include="Models\PeriodBudgetLine.cs" />
     <Compile Include="Models\StagedTransaction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\BudgetService.cs" />

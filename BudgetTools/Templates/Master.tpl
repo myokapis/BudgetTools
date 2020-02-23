@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="Content/master.css" />
     <script src="https://code.jquery.com/jquery-1.12.4.min.js" type="text/javascript"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" type="text/javascript"></script>
+    <script src="Scripts/App/common.js" type="text/javascript"></script>
     <script src="Scripts/App/master.js" type="text/javascript"></script>
     <!-- TODO: add js reference for the button actions and common navigation -->
     @@HEAD@@

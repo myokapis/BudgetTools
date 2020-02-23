@@ -11,10 +11,13 @@ declare @PeriodStartDate datetime;
 declare @PeriodEndDate datetime;
 declare @PreviousPeriodId int;
 
+declare @CashBudgetLineID int = dbo.GetParameter('Cash');
+
 declare @Transactions table
 (
     BudgetLineId int not null primary key,
-    Amount money not null
+    Amount money not null,
+    TransferAdjustment money not null
 );
 
 -- lookup period dates
@@ -29,26 +32,31 @@ from dbo.Periods
 where PeriodId < @PeriodId;
 
 -- summarize transactions
-insert into @Transactions(BudgetLineId, Amount)
-select BudgetLineId, sum(-1.0 * mt.Amount) as Amount
+insert into @Transactions(BudgetLineId, Amount, TransferAdjustment)
+select BudgetLineId,
+    sum(-1.0 * mt.Amount) as Amount,
+    sum(iif(t.TransactionTypeCode = 'X' and mt.Amount > 0.0, -mt.Amount, 0.0)) as TransferAdjustment
 from dbo.Transactions t
 inner join dbo.MappedTransactions mt on t.TransactionId = mt.TransactionId
 where t.TransactionDate >= @PeriodStartDate
 and t.TransactionDate < dateadd(day, 1, @PeriodEndDate)
 and t.BankAccountId = @BankAccountId
+and t.TransactionTypeCode in('S', 'X')
 group by BudgetLineId;
 
 -- return the budget for the period
 select a.BudgetLineId, bl.BudgetLineName, bl.BudgetCategoryName,
     a.PlannedAmount, a.AllocatedAmount, a.AccruedAmount,
     isnull(t.Amount, 0.0) as ActualAmount,
-    a.PlannedAmount - isnull(t.Amount, 0.0) as RemainingAmount,
-    isnull(pb.Balance, 0.0) as AccruedBalance,
+    a.AllocatedAmount - isnull(t.Amount, 0.0)
+        + iif(a.AccruedAmount <= 0.0, 0.0, a.AccruedAmount) as RemainingAmount,
+    isnull(pb.ProjectedBalance, 0.0) as AccruedBalance,
     case
         when bl.BudgetGroupName != 'Expenses' then a.AllocatedAmount
+        -- TODO: enforce a rule that transfers can only be applied to cash, assets, or accrued lines
         when bl.IsAccrued = 0 then a.AllocatedAmount
-        when a.AccruedAmount >= 0.0 then a.AllocatedAmount
-        else a.AllocatedAmount + -a.AccruedAmount
+        when a.AccruedAmount >= 0.0 then a.AllocatedAmount - isnull(t.TransferAdjustment, 0.0)
+        else a.AllocatedAmount + -a.AccruedAmount - isnull(t.TransferAdjustment, 0.0)
     end as TotalCashAmount,
     bl.IsAccrued
 from dbo.Allocations a

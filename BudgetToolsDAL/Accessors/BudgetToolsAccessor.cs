@@ -28,7 +28,7 @@ namespace BudgetToolsDAL.Accessors
 
         List<T> GetPeriodBalances<T>(int periodId);
 
-        List<PeriodBudgetLine> GetPeriodBudget(int PeriodId, int BankAccountId);
+        List<T> GetPeriodBudget<T>(int PeriodId, int BankAccountId);
 
         List<Period> GetPeriods();
 
@@ -100,7 +100,7 @@ namespace BudgetToolsDAL.Accessors
             bool isSuccess = false;
 
             // ensure balances are current
-            UpdatePeriodBalances(periodId, out isSuccess);
+            UpdatePeriodBalances(periodId, out isSuccess, true);
 
             // query budget line balances
             var budgetLines = db.Database.SqlQuery<BudgetLine>("exec dbo.GetBudgetLinesWithBalances @BankAccountId;",
@@ -134,7 +134,7 @@ namespace BudgetToolsDAL.Accessors
             CreateAllocations(periodId);
 
             // ensure balances are up to date
-            UpdatePeriodBalances(periodId, out isSuccess);
+            UpdatePeriodBalances(periodId, out isSuccess, true);
 
             // get the balances
             var balances = db.PeriodBalances
@@ -157,15 +157,14 @@ namespace BudgetToolsDAL.Accessors
             })).ToList();
         }
 
-        // TODO: make this generic with mapping
-        public List<PeriodBudgetLine> GetPeriodBudget(int PeriodId, int BankAccountId)
+        public List<T> GetPeriodBudget<T>(int PeriodId, int BankAccountId)
         {
 
             var lines = db.Database.SqlQuery<PeriodBudgetLine>("exec dbo.uspPeriodBudgetGet @PeriodId, @BankAccountId",
                 new SqlParameter("@PeriodID", PeriodId),
                 new SqlParameter("@BankAccountId", BankAccountId));
 
-            return lines.ToList();
+            return lines.Select(l => Mapper.Map<T>(l)).ToList();
 
         }
 
@@ -228,7 +227,7 @@ namespace BudgetToolsDAL.Accessors
                 new SqlParameter("@BudgetLineToID", budgetLineToId),
                 new SqlParameter("@Amount", amount),
                 new SqlParameter("@Note", note),
-                returnValue);
+                returnValue).ToList();
 
             isSuccess = returnValue.Value.Equals(0);
 
@@ -248,7 +247,7 @@ namespace BudgetToolsDAL.Accessors
             db.SaveChanges();
         }
 
-        private List<Message> UpdatePeriodBalances(int periodId, out bool isSuccess)
+        private List<Message> UpdatePeriodBalances(int periodId, out bool isSuccess, bool skipValidations = false)
         {
             var returnValue = ReturnValue;
 

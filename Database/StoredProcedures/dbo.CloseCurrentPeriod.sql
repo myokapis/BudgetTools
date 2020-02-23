@@ -1,8 +1,4 @@
-IF OBJECT_ID('dbo.CloseCurrentPeriod', 'P') IS NULL
-    EXEC('CREATE PROCEDURE dbo.CloseCurrentPeriod AS SELECT 1;');
-GO
-
-ALTER PROCEDURE dbo.CloseCurrentPeriod
+CREATE OR ALTER PROCEDURE dbo.CloseCurrentPeriod
 AS
 
 SET NOCOUNT ON;
@@ -39,23 +35,23 @@ FROM dbo.Periods p
 INNER JOIN CurrentPeriod cp ON p.PeriodId = cp.PeriodId;
     
 -- get final bank account balances for the period
-WITH
-LastTransactions AS
-(
-    SELECT BankAccountId, MAX(TransactionId) AS TransactionId
-    FROM dbo.Transactions
-    WHERE TransactionDate <= @PeriodEndDate
-    AND TransactionTypeCode != 'I'
-    GROUP BY BankAccountId
-)
 INSERT INTO @FinalBalances(BankAccountId, TransactionId, Balance)
-SELECT t.BankAccountId, t.TransactionId, t.Balance
-FROM dbo.Transactions t
-INNER JOIN dbo.BankAccounts b on t.BankAccountId = b.BankAccountId
-INNER JOIN LastTransactions lt ON t.BankAccountId = lt.BankAccountId
-    AND t.TransactionId = lt.TransactionId
+SELECT b.BankAccountId, xt.TransactionId,
+    ISNULL(t.Balance, 0.0) AS Balance
+FROM dbo.BankAccounts b
+OUTER APPLY
+(
+    SELECT TOP 1 tr.TransactionId
+    FROM dbo.Transactions tr
+    WHERE tr.TransactionTypeCode IN('S', 'X')
+    AND b.BankAccountId = tr.BankAccountId
+    ORDER BY tr.TransactionId DESC
+) xt
+LEFT JOIN dbo.Transactions t ON b.BankAccountId = t.BankAccountId
+    AND xt.TransactionId = t.TransactionId
 WHERE b.IsActive = 1;
 
+-- TODO: reinstate this after i fix the import to keep the transaction order and after i update ending balances in all accounts
 -- make sure final bank balances match the calculated balances
 INSERT INTO @Errors(ErrorText)
 SELECT a.BankAccountName + ', is out of balance. '
@@ -91,17 +87,13 @@ Actuals AS
     INNER JOIN dbo.Transactions t ON m.TransactionId = t.TransactionId
     WHERE t.TransactionDate >= @PeriodStartDate
     AND t.TransactionDate <= @PeriodEndDate
+    AND t.TransactionTypeCode IN('S', 'X')
     GROUP BY t.BankAccountId, m.BudgetLineId
 ),
 Planned AS
 (
     SELECT a.BankAccountId, a.BudgetLineId, v.BudgetLineName,
-        a.PlannedAmount
-        + CASE
-            WHEN v.BudgetGroupName = 'Expenses' AND a.AccruedAmount < 0.0 THEN -a.AccruedAmount
-            WHEN v.BudgetGroupName != 'Expenses' AND a.AccruedAmount > 0.0 THEN -a.AccruedAmount
-            ELSE 0.0
-        END AS PlannedAmount
+        a.AllocatedAmount + IIF(a.AccruedAmount > 0.0, a.AccruedAmount, 0.0) AS ExpectedActualAmount
     FROM dbo.Allocations a
     INNER JOIN dbo.vwBudgetGroupCategoryLine v ON a.BudgetLineId = v.BudgetLineId
     WHERE PeriodId = @PeriodId
@@ -112,7 +104,7 @@ FROM Planned p
 INNER JOIN dbo.BankAccounts b ON p.BankAccountId = b.BankAccountId
 LEFT JOIN Actuals a ON p.BankAccountId = a.BankAccountId
     AND p.BudgetLineId = a.BudgetLineId
-WHERE p.PlannedAmount != ISNULL(a.TotalAmount, 0.0);
+WHERE p.ExpectedActualAmount != ISNULL(a.TotalAmount, 0.0);
 
 SELECT @ErrorCount = COUNT(0)
 FROM @Errors;

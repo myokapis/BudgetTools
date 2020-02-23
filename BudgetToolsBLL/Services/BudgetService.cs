@@ -19,7 +19,7 @@ namespace BudgetToolsBLL.Services
         List<T> GetBudgetLineSet<T>(DateTime? effectiveDate = null);
         List<T> GetPeriodBudget<T>(int BankAccountId, int PeriodId);
         List<T> GetPeriodBalancesWithSummary<T>(int periodId);
-        List<T> GetPeriodBudgetWithSummary<T>(int bankAccountId, int periodId);
+        List<T2> GetPeriodBudgetWithSummary<T1, T2>(T1 scope);
         List<T> GetPeriods<T>(bool openOnly = false);
         T GetTransaction<T>(int transactionId);
         List<T> GetTransactions<T>(int bankAccountId, int periodId);
@@ -133,16 +133,19 @@ namespace BudgetToolsBLL.Services
         {
 
             // get the planned and allocated amounts for each budget line
-            return budgetToolsAccessor.GetPeriodBudget(bankAccountId, periodId)
-                .Select(d => Mapper.Map<T>(d)).ToList<T>();
+            return budgetToolsAccessor.GetPeriodBudget<T>(periodId, bankAccountId)
+                .Select(d => Mapper.Map<T>(d)).ToList();
 
         }
 
-        // TODO: refactor this to use a bll model and get a generic collection from the dal
-        public List<T> GetPeriodBudgetWithSummary<T>(int bankAccountId, int periodId)
+        public List<T2> GetPeriodBudgetWithSummary<T1, T2>(T1 scope)
         {
+            var dataScope = Mapper.Map<DataScope>(scope);
 
-            var lines = budgetToolsAccessor.GetPeriodBudget(bankAccountId, periodId)
+            if (dataScope.PeriodId > dataScope.CurrentPeriodId)
+                budgetToolsAccessor.CreateAllocations(dataScope.PeriodId);
+
+            var lines = budgetToolsAccessor.GetPeriodBudget<PeriodBudgetLine>(dataScope.PeriodId, dataScope.BankAccountId)
                 .Select(l => new
                 {
                     l.BudgetLineId,
@@ -178,7 +181,7 @@ namespace BudgetToolsBLL.Services
 
             lines.AddRange(summaryLines);
 
-            return lines.Select(l => Mapper.Map<T>(l)).ToList();
+            return lines.Select(l => Mapper.Map<T2>(l)).ToList();
         }
 
         public List<T> GetPeriods<T>(bool openOnly = false)

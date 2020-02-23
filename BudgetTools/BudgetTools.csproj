@@ -214,6 +214,7 @@
     <Content Include="Global.asax" />
     <Content Include="Scripts\App\admin.js" />
     <Content Include="Scripts\App\balances.js" />
+    <Content Include="Scripts\App\common.js" />
     <Content Include="Scripts\Libraries\angular.min.js" />
     <Content Include="Scripts\Libraries\bootstrap.js" />
     <Content Include="Scripts\Libraries\bootstrap.min.js" />
@@ -238,7 +239,9 @@
     <Content Include="Scripts\App\transactions.js" />
     <Content Include="Scripts\Libraries\_references.js" />
     <Content Include="TemplateEngine.jpg" />
-    <Content Include="Web.config" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </Content>

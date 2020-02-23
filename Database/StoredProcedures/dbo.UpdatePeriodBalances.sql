@@ -1,12 +1,8 @@
-IF OBJECT_ID('dbo.UpdatePeriodBalances', 'P') IS NULL
-    EXEC('CREATE PROCEDURE dbo.UpdatePeriodBalances AS SELECT 1;');
-GO
-
-ALTER PROCEDURE dbo.UpdatePeriodBalances
-    @PeriodId int
+CREATE OR ALTER PROCEDURE dbo.UpdatePeriodBalances
+    @PeriodId int,
+    @SkipValidations bit = 0
 AS
--- TODO: refactor proc to allow any open period to have its balances updated
---       would calc balances for current period then loop through selected period
+
 SET NOCOUNT ON
 
 DECLARE @CurrentPeriodID int;
@@ -185,7 +181,7 @@ BEGIN TRY
         -- current period validations
         ------------------------------------------------------------------------------
 
-        IF @ThisPeriodId = @CurrentPeriodId
+        IF @ThisPeriodId = @CurrentPeriodId AND @SkipValidations = 0
         BEGIN
 
             -- check for unbalanced transfers
@@ -263,7 +259,10 @@ BEGIN TRY
         -- get the starting period balances
         INSERT INTO #PeriodBalances(BankAccountID, BudgetLineID, Balance)
         SELECT a.BankAccountID, a.BudgetLineID,
-            ISNULL(b.Balance, 0) AS Balance
+            CASE
+                WHEN @ThisPeriodId = @CurrentPeriodId THEN ISNULL(b.Balance, 0.0)
+                ELSE ISNULL(b.ProjectedBalance, 0.0)
+            END AS Balance
         FROM dbo.vwPeriodBalanceLines a (NOLOCK)
         LEFT JOIN dbo.PeriodBalances b (NOLOCK) ON a.BankAccountID = b.BankAccountID
             AND a.BudgetLineID = b.BudgetLineID
@@ -319,7 +318,7 @@ BEGIN TRY
         -- rules
         ------------------------------------------------------------------------------
 
-        -- calculate remaining amount and distribute actual amount between line and cash
+        -- calculate remaining amount for expenses and distribute actual amount between line and cash
         UPDATE s
         SET RemainingAmount =
             CASE
@@ -339,15 +338,16 @@ BEGIN TRY
             CASE
                 WHEN IsAccrued = 1 THEN
                     CASE
+                        WHEN AccruedAmount > 0.0 THEN -ActualAmount - AccruedAmount
                         WHEN -ActualAmount > AccruedAmount THEN ActualAmount - -AccruedAmount
-                        ELSE ActualAmount - TransferAmount
+                        ELSE ActualAmount - IIF(BudgetLineId = @CashBudgetLineId, 0.0, TransferAmount)
                     END
                 ELSE ActualAmount
             END
         FROM #LineSummary s
         WHERE BudgetGroupName = 'Expenses';
 
-        -- calculate remaining amount and distribute actual amount between line and cash
+        -- calculate remaining amount for income/assets and distribute actual amount between line and cash
         UPDATE s
         SET RemainingAmount =
             CASE
@@ -359,13 +359,14 @@ BEGIN TRY
                 WHEN IsAccrued = 1 THEN
                     CASE
                         WHEN ActualAmount > -AccruedAmount THEN AccruedAmount
-                        ELSE ActualAmount
+                        ELSE ActualAmount - IIF(BudgetLineId = @CashBudgetLineId, 0.0, -TransferAmount)
                     END
                 ELSE 0.0
             END,
             ActualCashAmount =
             CASE
                 WHEN ActualAmount > -AccruedAmount THEN ActualAmount - -AccruedAmount
+                    - IIF(BudgetLineId = @CashBudgetLineId, 0.0, -TransferAmount)
                 ELSE 0.0
             END
         FROM #LineSummary s
@@ -382,7 +383,7 @@ BEGIN TRY
             ProjectedCashAmount =
             CASE
                 WHEN RemainingAmount = 0.0 THEN 0.0
-                WHEN -ActualAmount > AccruedAmount THEN -RemainingAmount
+                WHEN -ActualAmount >= AccruedAmount THEN -RemainingAmount
                 ELSE -ActualAmount - AccruedAmount
             END
         FROM #LineSummary s
@@ -485,6 +486,28 @@ BEGIN TRY
             AND a.BudgetLineID = b.BudgetLineID
         WHERE NOT(a.Balance + ISNULL(b.CurrentAmount, 0) = 0
         AND a.Balance + ISNULL(b.ProjectedAmount, 0) = 0);
+
+
+    
+       
+ 
+                                       
+                                          
+                                                             
+                      
+                                        
+ 
+                                                                     
+                                                      
+                                                                
+                      
+                                                     
+                                       
+                                                    
+                                                 
+                       
+                                          
+
 
         COMMIT TRANSACTION;
 

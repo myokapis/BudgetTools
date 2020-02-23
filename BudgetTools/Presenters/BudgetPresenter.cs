@@ -37,8 +37,8 @@ namespace BudgetTools.Presenters
         {
 
             // get budget records for the period
-            var records = this.budgetService
-                .GetPeriodBudgetWithSummary<PeriodBudgetLine>(this.pageScope.PeriodId, this.pageScope.BankAccountId)
+            var records = budgetService
+                .GetPeriodBudgetWithSummary<IPageScope, PeriodBudgetLine>(pageScope)
                 .OrderBy(l => l.BudgetCategoryName)
                 .ThenBy(l => l.IsDetail)
                 .ThenBy(l => l.BudgetLineName);
@@ -64,6 +64,7 @@ namespace BudgetTools.Presenters
             writer.SelectProvider("HEAD");
             writer.AppendSection(true);
 
+            // TODO: use a params arg to allow a chain of providers/sections to be selected
             writer.SelectProvider("BODY");
             writer.SelectProvider("SELECTOR");
             GetSelector(writer);
