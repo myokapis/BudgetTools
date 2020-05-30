@@ -6,6 +6,7 @@ SET NOCOUNT ON;
 DECLARE @PeriodID int;
 DECLARE @PeriodStartDate date;
 DECLARE @PeriodEndDate date;
+DECLARE @NextPeriodStartDate date;
 DECLARE @ErrorCount int = 0;
 
 DECLARE @FinalBalances TABLE
@@ -30,7 +31,8 @@ CurrentPeriod AS
 )
 SELECT @PeriodID = p.PeriodId,
     @PeriodStartDate = p.PeriodStartDate,
-    @PeriodEndDate = p.PeriodEndDate
+    @PeriodEndDate = p.PeriodEndDate,
+	@NextPeriodStartDate = DATEADD(day, 1, p.PeriodEndDate)
 FROM dbo.Periods p
 INNER JOIN CurrentPeriod cp ON p.PeriodId = cp.PeriodId;
     
@@ -45,6 +47,7 @@ OUTER APPLY
     FROM dbo.Transactions tr
     WHERE tr.TransactionTypeCode IN('S', 'X')
     AND b.BankAccountId = tr.BankAccountId
+	AND tr.TransactionDate < @NextPeriodStartDate
     ORDER BY tr.TransactionId DESC
 ) xt
 LEFT JOIN dbo.Transactions t ON b.BankAccountId = t.BankAccountId

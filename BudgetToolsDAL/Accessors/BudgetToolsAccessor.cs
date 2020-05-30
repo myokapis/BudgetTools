@@ -36,7 +36,7 @@ namespace BudgetToolsDAL.Accessors
 
         List<T> GetTransactions<T>(int bankAccountId, DateTime startDate, DateTime endDate);
 
-        void SaveStagedTransactions<T>(int bankAccountId, List<T> stagedTransactions);
+        void SaveStagedTransactions<T>(int bankAccountId, IEnumerable<T> stagedTransactions, bool isSortDesc=true);
 
         List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,
             decimal amount, string note, out bool isSuccess);
@@ -198,13 +198,16 @@ namespace BudgetToolsDAL.Accessors
             Direction = ParameterDirection.Output
         };
 
-        public void SaveStagedTransactions<T>(int bankAccountId, List<T> stagedTransactions)
+        public void SaveStagedTransactions<T>(int bankAccountId, IEnumerable<T> stagedTransactions, bool isSortDesc = true)
         {
-            var st = stagedTransactions.Select(t => Mapper.Map<StagedTransaction>(t)).ToList();
+            var st = (stagedTransactions is IEnumerable<StagedTransaction>) ?
+                stagedTransactions as IEnumerable<StagedTransaction> :
+                stagedTransactions.Select(t => Mapper.Map<StagedTransaction>(t)).ToList();
+
             db.DeleteStagedTransactions(bankAccountId);
             db.StageTransactions.AddRange(st);
             db.SaveChanges();
-            db.ImportTransactions(bankAccountId);
+            db.ImportTransactions(bankAccountId, isSortDesc);
         }
 
         public List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,

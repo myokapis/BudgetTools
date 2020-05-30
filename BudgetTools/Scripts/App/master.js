@@ -10,7 +10,7 @@
 
     function navClick() {
         var elem = $(this);
-        var url = '/' + elem.val();
+        var url = '/BudgetTools/' + elem.val();
         window.location.replace(url);
     }
 

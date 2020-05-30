@@ -17,6 +17,7 @@ namespace BudgetToolsDAL.Models
         public int? CheckNo { get; set; }
         public double Amount { get; set; }
         public double Balance { get; set; }
+        public int RowNo { get; set; }
     }
 
 }
