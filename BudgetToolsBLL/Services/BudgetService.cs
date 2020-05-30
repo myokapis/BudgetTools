@@ -24,7 +24,6 @@ namespace BudgetToolsBLL.Services
         T GetTransaction<T>(int transactionId);
         List<T> GetTransactions<T>(int bankAccountId, int periodId);
         void ImportFile(int bankAccountId, Stream stream);
-        void ImportTransactions(int bankAccountId, List<StagedTransaction> stagedTransactions);
 
         void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount);
@@ -41,10 +40,12 @@ namespace BudgetToolsBLL.Services
     public class BudgetService : IBudgetService
     {
         protected IBudgetToolsAccessor budgetToolsAccessor;
+        protected IImportService importService;
 
-        public BudgetService(IBudgetToolsAccessor budgetToolsRepository)
+        public BudgetService(IBudgetToolsAccessor budgetToolsAccessor, IImportService importService)
         {
-            this.budgetToolsAccessor = budgetToolsRepository;
+            this.budgetToolsAccessor = budgetToolsAccessor;
+            this.importService = importService;
         }
 
         public List<T1> CloseCurrentPeriod<T1, T2>(ref T2 pageScope)
@@ -206,25 +207,32 @@ namespace BudgetToolsBLL.Services
             return budgetToolsAccessor.GetTransactions<T>(bankAccountId, startDate, endDate);
         }
 
-        // TODO: move upload validator check into file parser. just pass in the value to check
-        //       make this a boolean method
+        // TODO: create a parser config table and associate its records with each bank account
+        // TODO: can add transaction order, BOM, encoding, etc. as needed
         public void ImportFile(int bankAccountId, Stream stream)
         {
-            var (uploadValidator, stagedTransactions) = ParseFile(bankAccountId, stream);
             var bankAccount = this.budgetToolsAccessor.GetBankAccount(bankAccountId);
 
-            // ensure file is for the specified bank account
-            if(bankAccount.UploadValidator != uploadValidator)
+            // TODO: get this from config in the db
+            // create a parser config
+            var parserConfig = new ParserConfig
             {
-                throw new Exception("UploadValidator was invalid for this bank account.");
-            }
+                BankAccountId = bankAccountId,
+                Delimiter = ',',
+                HeaderRows = 4,
+                Id = 1,
+                IsSortDesc = true,
+                ParserName = "FirstCommunity",
+                ValidationPattern = @"(?:\:\s*)(\S*)",
+                ValidationRowNo = 2,
+                ValidationValue = bankAccount.UploadValidator
+            };
 
-            ImportTransactions(bankAccountId, stagedTransactions);
-        }
+            // convert the raw row data to staged transactions
+            var stagedTransactions = importService.ParseStream<StagedTransaction>(stream, parserConfig);
 
-        public void ImportTransactions(int bankAccountId, List<StagedTransaction> stagedTransactions)
-        {
-            budgetToolsAccessor.SaveStagedTransactions<StagedTransaction>(bankAccountId, stagedTransactions);
+            // write the file data to a staging table and process it
+            budgetToolsAccessor.SaveStagedTransactions(bankAccountId, stagedTransactions, parserConfig.IsSortDesc);
         }
 
         public void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
@@ -268,49 +276,6 @@ namespace BudgetToolsBLL.Services
                 mappedTransactions);
 
         }
-
-        #region Protected Methods
-        // TODO: move these into a file parser class along with all the junk in StagedTransaction.
-        //       better design plus some day i may have another bank account that has a different export format
-        protected (string UploadValidator, List<StagedTransaction> StagedTransactions) ParseFile(int bankAccountId, Stream stream)
-        {
-            int skipLines = 4;
-            int lineNo = 0;
-            var stagedTransactions = new List<StagedTransaction>();
-            var fileValidator = "";
-
-            using (var reader = new StreamReader(stream))
-            {
-
-                while (!reader.EndOfStream)
-                {
-                    var line = reader.ReadLine();
-                    lineNo++;
-
-                    // TODO: bail out here if validator is false
-                    if (lineNo == 2) fileValidator = ParseValidator(line);
-
-                    if (lineNo > skipLines)
-                    {
-                        var data = line.Split(new char[] { ',' }).Select(v => v.Replace("\"", "")).ToArray();
-                        var st = new StagedTransaction(bankAccountId, data);
-                        stagedTransactions.Add(st);
-                    }
-                }
-
-            }
-
-            return (fileValidator, stagedTransactions);
-        }
-
-        protected string ParseValidator(string line)
-        {
-            var regex = new Regex(@"(?:\:\s*)(\S*)");
-            var match = regex.Match(line.Replace("\"", ""));
-            return match.Groups[1].Value;
-        }
-
-        #endregion
 
     }
 

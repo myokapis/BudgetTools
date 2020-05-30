@@ -320,30 +320,20 @@ BEGIN TRY
 
         -- calculate remaining amount for expenses and distribute actual amount between line and cash
         UPDATE s
-        SET RemainingAmount =
-            CASE
-                WHEN -ActualAmount < PlannedAmount THEN PlannedAmount - -ActualAmount
-                ELSE 0.0
-            END,
-            ActualLineAmount =
-            CASE
-                WHEN IsAccrued = 1 THEN
-                    CASE
-                        WHEN -ActualAmount > AccruedAmount THEN -AccruedAmount
-                        ELSE ActualAmount
-                    END
-                ELSE 0.0
-            END,
-            ActualCashAmount =
-            CASE
-                WHEN IsAccrued = 1 THEN
-                    CASE
-                        WHEN AccruedAmount > 0.0 THEN -ActualAmount - AccruedAmount
-                        WHEN -ActualAmount > AccruedAmount THEN ActualAmount - -AccruedAmount
-                        ELSE ActualAmount - IIF(BudgetLineId = @CashBudgetLineId, 0.0, TransferAmount)
-                    END
-                ELSE ActualAmount
-            END
+		SET RemainingAmount = PlannedAmount + ActualAmount
+				+ IIF(AccruedAmount < 0.0 AND @ThisPeriodId = @CurrentPeriodId, -AccruedAmount, 0.0),
+            ActualLineAmount = -AccruedAmount +
+				CASE
+					WHEN IsAccrued = 0 OR BudgetLineId = @CashBudgetLineId THEN 0.0
+					WHEN TransferAmount < 0.0 THEN 0.0
+					ELSE TransferAmount
+				END,
+            ActualCashAmount = ActualAmount + AccruedAmount +
+				CASE
+					WHEN IsAccrued = 0 OR BudgetLineId = @CashBudgetLineId THEN 0.0
+					WHEN TransferAmount < 0.0 THEN 0.0
+					ELSE -TransferAmount
+				END
         FROM #LineSummary s
         WHERE BudgetGroupName = 'Expenses';
 
@@ -356,16 +346,17 @@ BEGIN TRY
             END,
             ActualLineAmount =
             CASE
-                WHEN IsAccrued = 1 THEN
-                    CASE
-                        WHEN ActualAmount > -AccruedAmount THEN AccruedAmount
-                        ELSE ActualAmount - IIF(BudgetLineId = @CashBudgetLineId, 0.0, -TransferAmount)
-                    END
-                ELSE 0.0
+                WHEN IsAccrued = 0 THEN 0.0
+                WHEN ActualAmount > -AccruedAmount AND @ThisPeriodId = @CurrentPeriodId THEN AccruedAmount
+                ELSE ActualAmount - IIF(BudgetLineId = @CashBudgetLineId, 0.0, -TransferAmount)
             END,
             ActualCashAmount =
             CASE
-                WHEN ActualAmount > -AccruedAmount THEN ActualAmount - -AccruedAmount
+				WHEN ActualAmount < 0.0 THEN ActualAmount
+					- IIF(@ThisPeriodId = @CurrentPeriodId, -AccruedAmount, 0.0)
+                    - IIF(BudgetLineId = @CashBudgetLineId, 0.0, -TransferAmount)
+                WHEN ActualAmount > -AccruedAmount THEN ActualAmount
+					- IIF(@ThisPeriodId = @CurrentPeriodId, -AccruedAmount, 0.0)
                     - IIF(BudgetLineId = @CashBudgetLineId, 0.0, -TransferAmount)
                 ELSE 0.0
             END
@@ -377,14 +368,14 @@ BEGIN TRY
         SET ProjectedLineAmount =
             CASE
                 WHEN RemainingAmount = 0.0 THEN 0.0
-                WHEN -ActualAmount > AccruedAmount THEN 0.0
-                ELSE -(AccruedAmount - ActualAmount)
+                WHEN -ActualAmount > AccruedAmount AND @ThisPeriodId = @CurrentPeriodId THEN 0.0
+                ELSE ActualAmount - AccruedAmount
             END,
             ProjectedCashAmount =
             CASE
                 WHEN RemainingAmount = 0.0 THEN 0.0
-                WHEN -ActualAmount >= AccruedAmount THEN -RemainingAmount
-                ELSE -ActualAmount - AccruedAmount
+                WHEN -ActualAmount >= AccruedAmount AND @ThisPeriodId = @CurrentPeriodId THEN -RemainingAmount
+                ELSE AccruedAmount - ActualAmount
             END
         FROM #LineSummary s
         WHERE BudgetGroupName = 'Expenses';

@@ -103,6 +103,7 @@ namespace BudgetTools
             kernel.Bind<ITemplateCache>().To<TemplateCache>().InSingletonScope();
             kernel.Bind<IWebCache>().To<WebCache>().InSingletonScope()
                 .WithConstructorArgument("cache", HttpRuntime.Cache);
+            kernel.Bind<IImportService>().To<ImportService>().InSingletonScope();
 
         }
 

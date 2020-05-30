@@ -24,7 +24,7 @@ namespace BudgetToolsDAL.Contexts
         DbSet<BudgetLineSet> BudgetLineSets { get; set; }
         DbSet<PeriodBalance> PeriodBalances { get; set; }
 
-        void ImportTransactions(int bankAccountId);
+        void ImportTransactions(int bankAccountId, bool isSortDesc = true);
         void DeleteStagedTransactions(int bankAccountId);
         void UpdatePeriodBalances(int PeriodId, bool ClosePeriod);
         Period CurrentPeriod { get; }
@@ -53,11 +53,12 @@ namespace BudgetToolsDAL.Contexts
         public DbSet<PeriodBalance> PeriodBalances { get; set; }
         public DbSet<BudgetGroup> BudgetGroups { get; set; }
 
-        public void ImportTransactions(int bankAccountId)
+        public void ImportTransactions(int bankAccountId, bool isSortDesc = true)
         {
             Database.ExecuteSqlCommand("dbo.uspImportTransactions @BankAccountId", new object[]
             {
-                new SqlParameter("@BankAccountId", bankAccountId)
+                new SqlParameter("@BankAccountId", bankAccountId),
+                new SqlParameter("@IsSortDesc", isSortDesc)
             });
         }
 

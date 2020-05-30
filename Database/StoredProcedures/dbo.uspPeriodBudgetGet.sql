@@ -1,8 +1,4 @@
-if object_id('dbo.uspPeriodBudgetGet', 'P') is null
-    exec('create procedure dbo.uspPeriodBudgetGet as select 1;');
-go
-
-alter procedure dbo.uspPeriodBudgetGet
+create or alter procedure dbo.uspPeriodBudgetGet
     @PeriodId int,
     @BankAccountId int
 as
@@ -30,6 +26,28 @@ where PeriodId = @PeriodId;
 select @PreviousPeriodId = max(PeriodId)
 from dbo.Periods
 where PeriodId < @PeriodId;
+
+-- add any missing allocations
+insert into dbo.Allocations(PeriodId, BudgetLineId, PlannedAmount,
+    AllocatedAmount, AccruedAmount, BankAccountID)
+select @PeriodId, m.BudgetLineId, 0.0, 0.0, 0.0, @BankAccountId
+from dbo.MappedTransactions m
+inner join dbo.Transactions t on m.TransactionId = t.TransactionId
+where -- can't decide about this
+--m.BudgetLineId != @CashBudgetLineID
+--and 
+t.BankAccountId = @BankAccountId
+and t.TransactionDate >= @PeriodStartDate
+and t.TransactionDate < dateadd(day, 1, @PeriodEndDate)
+and not exists
+(
+    select 1
+    from dbo.Allocations a
+    where a.PeriodId = @PeriodId
+    and a.BankAccountId = @BankAccountId
+    and m.BudgetLineId = a.BudgetLineId
+)
+group by m.BudgetLineId;
 
 -- summarize transactions
 insert into @Transactions(BudgetLineId, Amount, TransferAdjustment)
