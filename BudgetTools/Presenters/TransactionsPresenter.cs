@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using BudgetTools.Classes;
 using BudgetTools.Models;
 using BudgetToolsBLL.Services;
@@ -10,40 +11,35 @@ namespace BudgetTools.Presenters
 
     public interface ITransactionsPresenter
     {
-        string GetEditor(int transactionId);
-        string GetEditor(Transaction transaction = null);
-        string GetPage();
-        string GetTransactionRows();
+        Task<string> GetEditor(int transactionId);
+        Task<string> GetEditor(Transaction transaction = null);
+        Task<string> GetPage(PageScope pageScope);
+        Task<string> GetTransactionRows(PageScope pageScope);
     }
 
     public class TransactionsPresenter : MasterPresenter, ITransactionsPresenter
     {
 
-        public TransactionsPresenter(IBudgetService budgetService, IPageScope pageScope, ITemplateCache templateCache,
-            IWebCache webCache)
+        public TransactionsPresenter(IBudgetService budgetService, ITemplateCache templateCache) : base(templateCache, budgetService)
         {
-            this.budgetService = budgetService;
-            this.pageScope = pageScope;
-            this.templateCache = templateCache;
-            this.webCache = webCache;
-
-            contentWriter = GetTemplateWriter("Transactions.tpl");
         }
 
-        public string GetEditor(int transactionId)
+        public async Task<string> GetEditor(int transactionId)
         {
-            var transaction = this.budgetService.GetTransaction<Transaction>(transactionId);
-            return GetEditor(transaction);
+            await SetupContentWriter("Transactions.tpl");
+            var transaction = await budgetService.GetTransaction<Transaction>(transactionId);
+            return await GetEditor(transaction);
         }
 
-        public string GetEditor(Transaction transaction = null)
+        public async Task<string> GetEditor(Transaction transaction = null)
         {
+            await SetupContentWriter("Transactions.tpl");
             var writer = contentWriter.GetWriter("EDITOR", true);
-            GetEditor(writer, transaction);
+            await WriteEditor(writer, transaction);
             return writer.GetContent(true);
         } 
 
-        private void GetEditor(ITemplateWriter writer, Transaction transaction = null)
+        private async Task WriteEditor(ITemplateWriter writer, Transaction transaction = null)
         {
 
             // handle null transaction
@@ -53,8 +49,7 @@ namespace BudgetTools.Presenters
                 MappedTransactions = new List<MappedTransaction>()
             };
 
-            // setup dropdowns TODO: cache the transaction type dropdown
-            var budgetLineDefinitions = this.webCache.BudgetLineDefinitions();
+            // setup dropdowns TODO: cache the transaction type and budget line dropdowns
             var transactionTypeDefinitions = new FieldDefinitions();
 
             transactionTypeDefinitions.SetDropdowns(new DropdownDefinition("TRANSACTION_TYPE", "TransactionTypeCode",
@@ -63,6 +58,11 @@ namespace BudgetTools.Presenters
                     new Option(){ Text = "Standard", Value = "S" },
                     new Option(){ Text = "Transfer", Value = "X" }
                 }));
+
+            var budgetLineDefinitions = new FieldDefinitions();
+
+            budgetLineDefinitions.SetDropdowns(new DropdownDefinition("BUDGET_LINES", "BudgetLineId",
+                await budgetService.GetBudgetLineSet<Option>()));
 
             // set up a default mapped transaction
             var mappedTransactions = xact.MappedTransactions;
@@ -81,45 +81,51 @@ namespace BudgetTools.Presenters
             writer.DeselectSection();
         }
 
-        public string GetPage()
+        public async Task<string> GetPage(PageScope pageScope)
         {
-            var writer = SetupMasterPage("HEAD", "BODY");
-            var selectorWriter = GetTemplateWriter("Common.tpl").GetWriter("SELECTOR");
-            this.contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
+            // setup master page and the content page section providers
+            await SetupWriters("Master.tpl", "Transactions.tpl");
+            SetupMasterPage("HEAD", "BODY");
 
-            writer.SelectProvider("HEAD");
-            writer.AppendSection(true);
+            // get common template and register it
+            var tplCommon = await GetTemplateWriter("Common.tpl");
+            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", tplCommon.GetWriter("SELECTOR"));
 
-            writer.SelectProvider("BODY");
-            writer.SelectProvider("SELECTOR");
-            GetSelector(writer);
+            // write head
+            WriteMasterSection("HEAD");
 
-            writer.SelectSection("ROW");
-            GetTransactionRows(writer);
-            writer.DeselectSection();
+            // write body
+            await WriteMasterSection("BODY", async (writer) =>
+            {
+                await WriteSelector(writer, pageScope);
 
-            writer.SelectSection("EDITOR");
-            GetEditor(writer, null);
-            writer.AppendAll();
+                writer.SelectSection("ROW");
+                await WriteTransactionRows(pageScope, writer);
+                writer.DeselectSection();
 
-            return writer.GetContent();
+                writer.SelectSection("EDITOR");
+                await WriteEditor(writer, null);
+            });
+
+            return GetContent();
         }
 
-        public string GetTransactionRows()
+        public async Task<string> GetTransactionRows(PageScope pageScope)
         {
+            await SetupContentWriter("Transactions.tpl");
             var writer = contentWriter.GetWriter("ROW");
-            GetTransactionRows(writer);
-            return writer.GetContent();
+            await WriteTransactionRows(pageScope, writer);
+            return writer.GetContent(true);
         }
 
-        private void GetTransactionRows(ITemplateWriter writer)
+        private async Task WriteTransactionRows(PageScope pageScope, ITemplateWriter writer)
         {
             // get transaction data
-            var transactions = budgetService.GetTransactions<Transaction>(this.pageScope.BankAccountId, this.pageScope.PeriodId);
+            var transactions = await budgetService.GetTransactions<Transaction>(pageScope.BankAccountId, pageScope.PeriodId);
 
             foreach (var transaction in transactions.OrderByDescending(t => t.TransactionDate))
             {
-                writer.SetSectionFields<Transaction>(transaction, SectionOptions.Set);
+                writer.SetSectionFields(transaction, SectionOptions.Set);
                 writer.SetField("Class", transaction.IsMapped ? "transaction-row-mapped" : "transaction-row");
                 writer.AppendSection();
             }

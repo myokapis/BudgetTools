@@ -54,3 +54,11 @@ input[type="file"] {
     display: inline-block;
     padding-left: 6px;
 }
+
+.page-scope {
+    display: none;
+}
+
+#selector-div {
+    display: none;
+}

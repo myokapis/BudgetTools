@@ -1,15 +1,18 @@
-﻿using System.IO;
-using System.Web.Mvc;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using BudgetTools.Presenters;
 using BudgetToolsBLL.Services;
+using BudgetTools.Models;
+using Microsoft.AspNetCore.Mvc.Formatters;
 
 namespace BudgetTools.Controllers
 {
     public class ImportController : Controller
     {
 
-        protected IImportPresenter importPresenter;
-        protected IBudgetService budgetService;
+        private readonly IImportPresenter importPresenter;
+        private readonly IBudgetService budgetService;
 
         public ImportController(IImportPresenter importPresenter, IBudgetService budgetService)
         {
@@ -17,19 +20,28 @@ namespace BudgetTools.Controllers
             this.budgetService = budgetService;
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index(PageScope pageScope)
         {
-            return Content(this.importPresenter.GetPage());
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            return Content(await importPresenter.GetPage(pageScope), "text/html");
         }
 
-        public void ImportFile()
+        // TODO: return json with success or failure and message
+        public async Task<ActionResult> ImportFile(int bankAccountId)
         {
-            int bankAccountId = int.Parse(Request.Params["bankAccountId"]);
-            var file = Request.Files[0];
-            string fileName = file.FileName;
-            var reader = new StreamReader(file.InputStream);
+            if (bankAccountId == 0)
+                throw new Exception("Invalid bank accounn id.");
 
-            budgetService.ImportFile(bankAccountId, reader.BaseStream);
+            var file = Request.Form.Files[0];
+
+            using(var stream = file.OpenReadStream())
+            {
+                await budgetService.ImportFile(bankAccountId, stream);
+            }
+
+            return Json("");
         }
 
     }

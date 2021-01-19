@@ -38,7 +38,8 @@
 }
 
 .editor-section-div {
-    flex: 1 1 content;
+    flex: 1 1;
+    flex-basis: auto;
     height: calc(100% - 32px);
     overflow: hidden;
     background-color: #dddddd;
@@ -114,9 +115,9 @@
     margin-right: 8px;
 }
 
-#actionButtons {
-    /*margin-top: 20px;*/
-    display: none;
+.actionButtons:disabled {
+    opacity: 0.3;
+    cursor: default;
 }
 
 .grid-label {

@@ -1,6 +1,6 @@
 <!-- @@HEAD@@ -->
-<link rel="stylesheet" href="Content/Budget.css" />
-<script type="text/javascript" src="Scripts/App/budget.js"></script>
+<link rel="stylesheet" href="css/Budget.css" />
+<script type="text/javascript" src="js/budget.js"></script>
 <!-- @@HEAD@@ -->
 
 <!-- @@BODY@@ -->

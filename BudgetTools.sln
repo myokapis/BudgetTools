@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26403.7
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30002.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BudgetTools", "BudgetTools\BudgetTools.csproj", "{FC4DABF0-169E-44C4-A851-4E1F310B18B2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BudgetTools", "BudgetTools\BudgetTools.csproj", "{FC4DABF0-169E-44C4-A851-4E1F310B18B2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BudgetTools.Tests", "BudgetTools.Tests\BudgetTools.Tests.csproj", "{D9333F0B-E24B-4BF4-9740-D97A466BC330}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BudgetTools.Tests", "BudgetTools.Tests\BudgetTools.Tests.csproj", "{D9333F0B-E24B-4BF4-9740-D97A466BC330}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BudgetToolsDAL", "BudgetToolsDAL\BudgetToolsDAL.csproj", "{BBA2F7F6-3280-469E-A5D5-B96876B6D524}"
 EndProject
@@ -36,5 +36,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {950F9AED-BAEA-4C94-9F6E-40A12E5F3108}
 	EndGlobalSection
 EndGlobal

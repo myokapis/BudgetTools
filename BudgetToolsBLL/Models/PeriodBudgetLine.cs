@@ -1,7 +1,7 @@
 ﻿namespace BudgetToolsBLL.Models
 {
 
-    class PeriodBudgetLine
+    public class PeriodBudgetLine
     {
         public int BudgetLineId { get; set; }
         public string BudgetLineName { get; set; }
@@ -14,6 +14,7 @@
         public decimal AccruedBalance { get; set; }
         public decimal TotalCashAmount { get; set; }
         public bool IsAccrued { get; set; }
+        public bool IsDetail { get; set; }
     }
 
 }

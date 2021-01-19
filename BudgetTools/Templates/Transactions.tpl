@@ -1,6 +1,6 @@
 ﻿<!-- @@HEAD@@ -->
-<link rel="stylesheet" href="Content/Transactions.css" />
-<script type="text/javascript" src="Scripts/App/transactions.js"></script>
+<link rel="stylesheet" href="css/Transactions.css" />
+<script type="text/javascript" src="js/transactions.js"></script>
 <!-- @@HEAD@@ -->
 
 <!-- @@BODY@@ -->
@@ -12,7 +12,6 @@
             <div>Check No</div>
             <div style="text-align: right;">Amount</div>
             <div>Description</div>
-            <!-- br style="clear: left;" / -->
         </div>
         <div class="table-div">
             <table id="transactions">
@@ -69,9 +68,9 @@
             </tbody>
         </table>
         <div class="editor-button-container">
-            <input type="button" value="Prev" id="prev" />
-            <input type="button" value="Next" id="next" />
-            <input type="button" value="Save" id="save" />
+            <button type="button" value="Prev" id="prev" />
+            <button type="button" value="Next" id="next" />
+            <button type="button" value="Save" id="save" />
         </div>
         <!-- @@EDITOR@@ -->
     </div>

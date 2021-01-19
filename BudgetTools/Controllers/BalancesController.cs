@@ -1,5 +1,6 @@
-﻿using System.Web.Mvc;
-using BudgetTools.Classes;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using BudgetTools.Models;
 using BudgetTools.Presenters;
 using BudgetToolsBLL.Services;
 
@@ -7,8 +8,8 @@ namespace BudgetTools.Controllers
 {
     public class BalancesController : Controller
     {
-        protected IBalancesPresenter balancesPresenter;
-        protected IBudgetService budgetService;
+        private readonly IBalancesPresenter balancesPresenter;
+        private readonly IBudgetService budgetService;
 
         public BalancesController(IBalancesPresenter balancesPresenter, IBudgetService budgetService)
         {
@@ -16,15 +17,26 @@ namespace BudgetTools.Controllers
             this.budgetService = budgetService;
         }
 
-        public ActionResult ChangePeriod(int periodId)
+        public async Task<ActionResult> Index(PageScope pageScope)
         {
-            (Session["pageScope"] as IPageScope).PeriodId = periodId;
-            return Content(balancesPresenter.GetTransactionRows());
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            return Content(await balancesPresenter.GetPage(pageScope), "text/html");
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> LoadPeriodBalances(PageScope pageScope)
         {
-            return Content(balancesPresenter.GetPage());
+            // seems like non-index methods should throw an error when pagescope is invalid
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            var data = new
+            {
+                html = await balancesPresenter.GetTransactionRows(pageScope.PeriodId)
+            };
+
+            return Json(data);
         }
 
     }

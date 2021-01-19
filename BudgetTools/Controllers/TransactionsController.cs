@@ -1,18 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Web.Mvc;
-using BudgetTools.Classes;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using BudgetTools.Models;
 using BudgetTools.Presenters;
 using BudgetToolsBLL.Services;
-using BudgetTools.Models;
+
+public class Bubble
+{
+    public int Popped { get; set; }
+}
 
 namespace BudgetTools.Controllers
 {
     public class TransactionsController : Controller
     {
-        protected ITransactionsPresenter transactionsPresenter;
-        protected IBudgetService budgetService;
+        private readonly ITransactionsPresenter transactionsPresenter;
+        private readonly IBudgetService budgetService;
 
         public TransactionsController(ITransactionsPresenter transactionsPresenter, IBudgetService budgetService)
         {
@@ -20,42 +24,31 @@ namespace BudgetTools.Controllers
             this.transactionsPresenter = transactionsPresenter;
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index(PageScope pageScope)
         {
-            return Content(this.transactionsPresenter.GetPage());
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            return Content(await transactionsPresenter.GetPage(pageScope), "text/html");
         }
 
-        public JsonResult ChangeBankAccount(int bankAccountId)
+        public async Task<JsonResult> ChangePageScope(PageScope pageScope)
         {
-            IPageScope pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            pageScope.BankAccountId = bankAccountId;
+            if (!ModelState.IsValid) 
+                pageScope = await budgetService.GetPageScope<PageScope>();
 
             var output = new
             {
-                transactions = this.transactionsPresenter.GetTransactionRows(),
-                editor = this.transactionsPresenter.GetEditor(null)
+                transactions = await transactionsPresenter.GetTransactionRows(pageScope),
+                editor = await transactionsPresenter.GetEditor(null)
             };
 
             return Json(output);
         }
 
-        public JsonResult ChangePeriod(int periodId)
+        public async Task<JsonResult> GetTransaction(int transactionId)
         {
-            IPageScope pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            pageScope.PeriodId = periodId;
-
-            var output = new
-            {
-                transactions = this.transactionsPresenter.GetTransactionRows(),
-                editor = this.transactionsPresenter.GetEditor(null)
-            };
-
-            return Json(output);
-        }
-
-        public JsonResult GetTransaction(int transactionId)
-        {
-            var transaction = budgetService.GetTransaction<Transaction>(transactionId);
+            var transaction = await budgetService.GetTransaction<Transaction>(transactionId);
 
             var data = new
             {
@@ -75,11 +68,14 @@ namespace BudgetTools.Controllers
             return Json(data);
         }
 
-        public void UpdateTransaction(int transactionId, string transactionTypeCode, string recipient,
+        public async Task<JsonResult> UpdateTransaction(int transactionId, string transactionTypeCode, string recipient,
             string notes, List<MappedTransaction> mappedTransactions)
         {
-            budgetService.UpdateTransaction(transactionId, transactionTypeCode, recipient, notes,
-                mappedTransactions);
+            //var mappedTransactions = new List<MappedTransaction> { mappedTransaction };
+            // TODO: need to return json indicating success or failure w/ message
+            await budgetService.UpdateTransaction(transactionId, transactionTypeCode, recipient, notes, mappedTransactions);
+
+            return Json("");
         }
 
     }

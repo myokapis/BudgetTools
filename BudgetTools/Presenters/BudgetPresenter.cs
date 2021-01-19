@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using BudgetTools.Classes;
 using BudgetTools.Models;
 using BudgetToolsBLL.Services;
@@ -9,36 +10,31 @@ namespace BudgetTools.Presenters
 
     public interface IBudgetPresenter
     {
-        string GetPage();
-        string GetTransactionRows();
+        Task<string> GetPage(PageScope pageScope);
+        Task<string> GetTransactionRows(PageScope pageScope);
     }
 
     public class BudgetPresenter : MasterPresenter, IBudgetPresenter
     {
 
-        public BudgetPresenter(IBudgetService budgetService, IPageScope pageScope, ITemplateCache templateCache)
+        public BudgetPresenter(IBudgetService budgetService, ITemplateCache templateCache) : base(templateCache, budgetService)
         {
-            this.budgetService = budgetService;
-            this.pageScope = pageScope;
-            this.templateCache = templateCache;
-
-            contentWriter = GetTemplateWriter("Budget.tpl");
         }
 
-        public string GetTransactionRows()
+        public async Task<string> GetTransactionRows(PageScope pageScope)
         {
+            await SetupContentWriter("Budget.tpl");
             var writer = contentWriter.GetWriter("TBODY", true);
-            GetTransactionRows(writer);
+            await GetTransactionRows(pageScope, writer);
             writer.AppendAll();
             return writer.GetContent();
         }
 
-        private void GetTransactionRows(ITemplateWriter writer = null)
+        private async Task GetTransactionRows(PageScope pageScope, ITemplateWriter writer = null)
         {
 
             // get budget records for the period
-            var records = budgetService
-                .GetPeriodBudgetWithSummary<IPageScope, PeriodBudgetLine>(pageScope)
+            var records = (await budgetService.GetPeriodBudgetWithSummary<PageScope, PeriodBudgetLine>(pageScope))
                 .OrderBy(l => l.BudgetCategoryName)
                 .ThenBy(l => l.IsDetail)
                 .ThenBy(l => l.BudgetLineName);
@@ -53,26 +49,37 @@ namespace BudgetTools.Presenters
 
         }
 
-        public string GetPage()
+        public async Task<string> GetPage(PageScope pageScope)
         {
             // setup master page and the content page section providers
-            var writer = SetupMasterPage("HEAD", "BODY");
-            var selectorWriter = GetTemplateWriter("Common.tpl").GetWriter("SELECTOR");
-            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
+            await SetupWriters("Master.tpl", "Budget.tpl");
+            SetupMasterPage("HEAD", "BODY");
 
-            // TODO: include a sectionoptions param in SelectProvider and use it to simplify this to a one liner
-            writer.SelectProvider("HEAD");
-            writer.AppendSection(true);
+            // get common template and register it
+            var tplCommon = await GetTemplateWriter("Common.tpl");
+            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", tplCommon.GetWriter("SELECTOR"));
 
-            // TODO: use a params arg to allow a chain of providers/sections to be selected
-            writer.SelectProvider("BODY");
-            writer.SelectProvider("SELECTOR");
-            GetSelector(writer);
-            writer.SelectSection("TBODY");
-            GetTransactionRows(writer);
-            writer.AppendAll();
+            // write head
+            WriteMasterSection("HEAD");
 
-            return writer.GetContent();
+
+            //writer.SelectProvider("BODY");
+            //writer.SelectProvider("SELECTOR");
+            //await GetSelector(writer, pageScope);
+            //writer.SelectSection("TBODY");
+            //await GetTransactionRows(pageScope, writer);
+            //writer.AppendAll();
+
+            // write body
+            await WriteMasterSection("BODY", async (writer) =>
+            {
+                await WriteSelector(writer, pageScope);
+                writer.SelectSection("TBODY");
+                await GetTransactionRows(pageScope, writer);
+                //writer.DeselectSection();
+            });
+
+            return GetContent();
         }
 
     }

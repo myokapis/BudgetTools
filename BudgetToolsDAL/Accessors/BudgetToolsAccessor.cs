@@ -1,196 +1,217 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using AutoMapper;
+using LazyCache;
 using BudgetToolsDAL.Contexts;
 using BudgetToolsDAL.Models;
+using System.Runtime.CompilerServices;
+
+// TODO: revise to use named parameters
 
 namespace BudgetToolsDAL.Accessors
 {
 
     public interface IBudgetToolsAccessor
     {
-        List<T> CloseCurrentPeriod<T>(out bool isSuccess);
+        Task<(bool IsSuccess, List<T> Messages)> CloseCurrentPeriod<T>();
 
-        void CreateAllocations(int periodId);
+        Task<int> CreateAllocations(int periodId);
 
-        BankAccount GetBankAccount(int bankAccountId);
+        Task<BankAccount> GetBankAccount(int bankAccountId);
 
-        List<BankAccount> GetBankAccounts();
+        Task<List<BankAccount>> GetBankAccounts();
 
-        List<T> GetBudgetLineBalances<T>(int periodId, int bankAccountId);
+        Task<List<T>> GetBudgetLineBalances<T>(int periodId, int bankAccountId);
 
-        List<T> GetBudgetLineSet<T>(DateTime effectiveDate);
+        Task<List<T>> GetBudgetLineSet<T>(DateTime effectiveDate, bool fromCache = false);
 
-        int GetCurrentPeriodId();
+        Task<T> GetCurrentPeriod<T>();
 
-        List<T> GetPeriodBalances<T>(int periodId);
+        Task<int> GetCurrentPeriodId();
 
-        List<T> GetPeriodBudget<T>(int PeriodId, int BankAccountId);
+        Task<List<T>> GetPeriodBalances<T>(int periodId);
 
-        List<Period> GetPeriods();
+        Task<List<T>> GetPeriodBudget<T>(int PeriodId, int BankAccountId);
 
-        T GetTransaction<T>(int transactionId);
+        Task<List<Period>> GetPeriods();
 
-        List<T> GetTransactions<T>(int bankAccountId, DateTime startDate, DateTime endDate);
+        Task<T> GetPreviousPeriod<T>();
 
-        void SaveStagedTransactions<T>(int bankAccountId, IEnumerable<T> stagedTransactions, bool isSortDesc=true);
+        Task<T> GetTransaction<T>(int transactionId);
 
-        List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,
-            decimal amount, string note, out bool isSuccess);
+        Task<List<T>> GetTransactions<T>(int bankAccountId, DateTime startDate, DateTime endDate);
 
-        void UpdateBudgetLine(int periodId, int budgetLineId, int bankAccountId,
+        Task SaveStagedTransactions<T>(int bankAccountId, IEnumerable<T> stagedTransactions, bool isSortDesc=true);
+
+        Task<(bool IsSuccess, List<T> Messages)> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,
+            decimal amount, string note);
+
+        Task<int> UpdateBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount);
 
-        void UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
+        Task<int> UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
             string notes, List<T> mappedTransactions);
     }
 
     public class BudgetToolsAccessor : IBudgetToolsAccessor
     {
+        private readonly IAppCache cache;
+        private readonly BudgetToolsDBContext db;
+        private readonly IMapper mapper;
 
-        protected IBudgetToolsDBContext db;
-
-        public BudgetToolsAccessor(IBudgetToolsDBContext budgetToolsDBContext)
+        public BudgetToolsAccessor(BudgetToolsDBContext budgetToolsDBContext, IAppCache cache, IMapper mapper)
         {
             db = budgetToolsDBContext;
+            this.mapper = mapper;
+            this.cache = cache;
         }
 
-        public List<T> CloseCurrentPeriod<T>(out bool isSuccess)
+        public async Task<(bool IsSuccess, List<T> Messages)> CloseCurrentPeriod<T>()
         {
-            var periodId = GetCurrentPeriodId();
+            var period = await GetCurrentPeriod<Period>();
 
             // ensure balances are up to date
-            var messages = UpdatePeriodBalances(periodId, out isSuccess)
-                .Select(m => Mapper.Map<T>(m)).ToList();
+            var result = await UpdatePeriodBalances(period.PeriodId);
 
             // bail out if processing failed
-            if (!isSuccess) return messages;
+            if (!result.IsSuccess) return (false, result.Messages.Select(m => mapper.Map<T>(m)).ToList());
 
             // attempt to close the period
             var returnValue = ReturnValue;
-            messages = db.Database.SqlQuery<Message>("exec @ReturnValue = dbo.CloseCurrentPeriod", returnValue)
-                .Select(m => Mapper.Map<T>(m))
-                .ToList();
 
-            isSuccess = returnValue.Value.Equals(0);
-            return messages;
+            var messages = await db.Set<Message>()
+                .FromSqlRaw("exec @ReturnValue = dbo.CloseCurrentPeriod", returnValue)
+                .AsNoTracking()
+                .Select(m => mapper.Map<T>(m))
+                .ToListAsync();
+
+            return (returnValue.Value.Equals(0), messages);
         }
 
-        public void CreateAllocations(int periodId)
+        public async Task<int> CreateAllocations(int periodId)
         {
-            db.Database.ExecuteSqlCommand("exec dbo.uspCreateAllocations @PeriodId",
+            return await db.Database.ExecuteSqlRawAsync("exec dbo.uspCreateAllocations @PeriodId",
                 new SqlParameter("@PeriodId", periodId));
         }
 
-        public BankAccount GetBankAccount(int bankAccountId)
+        public async Task<BankAccount> GetBankAccount(int bankAccountId)
         {
-            return db.BankAccounts.FirstOrDefault(a => a.BankAccountId == bankAccountId);
+            return await db.BankAccounts.FirstOrDefaultAsync(a => a.BankAccountId == bankAccountId);
         }
 
-        public List<BankAccount> GetBankAccounts()
+        public async Task<List<BankAccount>> GetBankAccounts()
         {
-            return db.BankAccounts.ToList();
+            return await db.BankAccounts.ToListAsync();
         }
 
-        public List<T> GetBudgetLineBalances<T>(int periodId, int bankAccountId)
+        public async Task<List<T>> GetBudgetLineBalances<T>(int periodId, int bankAccountId)
         {
-            bool isSuccess = false;
-
             // ensure balances are current
-            UpdatePeriodBalances(periodId, out isSuccess, true);
+            await UpdatePeriodBalances(periodId, true);
 
             // query budget line balances
-            var budgetLines = db.Database.SqlQuery<BudgetLine>("exec dbo.GetBudgetLinesWithBalances @BankAccountId;",
-                new object[] { new SqlParameter("@BankAccountId", bankAccountId) });
+            var budgetLines = await db.BudgetLines.FromSqlRaw("exec dbo.GetBudgetLinesWithBalances @BankAccountId;",
+                new SqlParameter("@BankAccountId", bankAccountId)).ToListAsync();
 
-            return budgetLines.Select(b => Mapper.Map<T>(b)).ToList();
+            return budgetLines.Select(b => mapper.Map<T>(b)).ToList();
         }
 
-        public List<T> GetBudgetLineSet<T>(DateTime effectiveDate)
+        public async Task<List<T>> GetBudgetLineSet<T>(DateTime effectiveDate, bool fromCache = false)
         {
-            var lines = db.BudgetLineSets
+            Func<Task<List<BudgetLineSet>>> dataFunc = () => db.BudgetLineSets
                 .Where(l => l.EffInDate <= effectiveDate && (l.EffOutDate ?? DateTime.MaxValue) > effectiveDate)
-                .ToList();
+                .ToListAsync();
 
-            return lines.Select(l => Mapper.Map<T>(l)).ToList();
+            var lines = fromCache ? await cache.GetOrAddAsync("BudgetLineDefinitions", dataFunc) : await dataFunc();
+
+            return lines.OrderBy(l => l.BudgetLineName).Select(l => mapper.Map<T>(l)).ToList();
         }
 
-        public int GetCurrentPeriodId()
+        public async Task<T> GetCurrentPeriod<T>()
         {
-            return db.Periods
-                .Where(p => p.IsOpen)
-                .OrderBy(p => p.PeriodId)
-                .First().PeriodId;
+            var period = await db.Periods
+                .Where(p => p.IsOpen == true)
+                .OrderBy(o => o.PeriodId)
+                .FirstAsync();
+
+            return mapper.Map<T>(period);
         }
 
-        public List<T> GetPeriodBalances<T>(int periodId)
+        public async Task<int> GetCurrentPeriodId()
         {
-            bool isSuccess = false;
+            var period = await GetCurrentPeriod<Period>();
+            return period.PeriodId;
+        }
 
+        public async Task<List<T>> GetPeriodBalances<T>(int periodId)
+        {
             // ensure allocations are up to date
-            CreateAllocations(periodId);
+            await CreateAllocations(periodId);
 
             // ensure balances are up to date
-            UpdatePeriodBalances(periodId, out isSuccess, true);
+            await UpdatePeriodBalances(periodId, true);
 
             // get the balances
-            var balances = db.PeriodBalances
+            var balances = await db.PeriodBalances
                 .Where(b => b.PeriodId == periodId
                     && (b.PreviousBalance != 0m || b.ProjectedBalance != 0m || b.Balance != 0m))
-                .ToList();
+                .ToListAsync();
 
-            return balances.Select(b => Mapper.Map<T>(new
-            {
-                b.PeriodId,
-                b.BankAccountId,
-                b.BudgetLineId,
-                b.BankAccountName,
-                b.BudgetGroupName,
-                b.BudgetCategoryName,
-                b.BudgetLineName,
-                b.PreviousBalance,
-                b.Balance,
-                b.ProjectedBalance
-            })).ToList();
+            return balances.Select(b => mapper.Map<T>(b)).ToList();
         }
 
-        public List<T> GetPeriodBudget<T>(int PeriodId, int BankAccountId)
+        public async Task<List<T>> GetPeriodBudget<T>(int PeriodId, int BankAccountId)
         {
 
-            var lines = db.Database.SqlQuery<PeriodBudgetLine>("exec dbo.uspPeriodBudgetGet @PeriodId, @BankAccountId",
-                new SqlParameter("@PeriodID", PeriodId),
-                new SqlParameter("@BankAccountId", BankAccountId));
+            var lines = await db.Set<PeriodBudgetLine>()
+                .FromSqlRaw("exec dbo.uspPeriodBudgetGet @PeriodId, @BankAccountId",
+                    new SqlParameter("@PeriodID", PeriodId),
+                    new SqlParameter("@BankAccountId", BankAccountId))
+                .ToListAsync();
 
-            return lines.Select(l => Mapper.Map<T>(l)).ToList();
+            return lines.Select(l => mapper.Map<T>(l)).ToList();
 
         }
 
-        public List<Period> GetPeriods()
+        public async Task<List<Period>> GetPeriods()
         {
-            return db.Periods.ToList();
+            return await db.Periods.ToListAsync();
         }
 
-        public T GetTransaction<T>(int transactionId)
+        public async Task<T> GetPreviousPeriod<T>()
         {
-            var transaction = db.Transactions
-                .FirstOrDefault(t => t.TransactionId == transactionId);
+            var period = await db.Periods
+            .Where(p => p.IsOpen == false)
+            .OrderByDescending(o => o.PeriodId)
+            .FirstAsync();
 
-            return (transaction == null) ? default(T) : Mapper.Map<T>(transaction);
+            return mapper.Map<T>(period);
         }
 
-        public List<T> GetTransactions<T>(int bankAccountId, DateTime startDate, DateTime endDate)
+        public async Task<T> GetTransaction<T>(int transactionId)
         {
-            var transactions = db.Transactions
+            var transaction = await db.Transactions
+                .Include(t => t.MappedTransactions)
+                .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+
+            return (transaction == null) ? default(T) : mapper.Map<T>(transaction);
+        }
+
+        public async Task<List<T>> GetTransactions<T>(int bankAccountId, DateTime startDate, DateTime endDate)
+        {
+            var transactions = await db.Transactions
                 .Where(t => t.BankAccountId == bankAccountId
                     && t.TransactionDate >= startDate
                     && t.TransactionDate <= endDate
                     && t.TransactionTypeCode != "I")
-                .ToList();
+                .ToListAsync();
 
-            return transactions.Select(t => Mapper.Map<T>(t)).ToList();
+            return transactions.Select(t => mapper.Map<T>(t)).ToList();
         }
 
         private SqlParameter ReturnValue => new SqlParameter("@ReturnValue", SqlDbType.Int)
@@ -198,80 +219,102 @@ namespace BudgetToolsDAL.Accessors
             Direction = ParameterDirection.Output
         };
 
-        public void SaveStagedTransactions<T>(int bankAccountId, IEnumerable<T> stagedTransactions, bool isSortDesc = true)
+        public async Task SaveStagedTransactions<T>(int bankAccountId, IEnumerable<T> stagedTransactions, bool isSortDesc = true)
         {
             var st = (stagedTransactions is IEnumerable<StagedTransaction>) ?
                 stagedTransactions as IEnumerable<StagedTransaction> :
-                stagedTransactions.Select(t => Mapper.Map<StagedTransaction>(t)).ToList();
+                stagedTransactions.Select(t => mapper.Map<StagedTransaction>(t)).ToList();
 
-            db.DeleteStagedTransactions(bankAccountId);
-            db.StageTransactions.AddRange(st);
-            db.SaveChanges();
-            db.ImportTransactions(bankAccountId, isSortDesc);
+            await DeleteStagedTransactions(bankAccountId);
+            db.StagedTransactions.AddRange(st);
+            await db.SaveChangesAsync();
+            await ImportTransactions(bankAccountId, isSortDesc);
         }
 
-        public List<T> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,
-            decimal amount, string note, out bool isSuccess)
+        public async Task<(bool IsSuccess, List<T> Messages)> SaveTransfer<T>(int bankAccountId, int budgetLineFromId, int budgetLineToId,
+            decimal amount, string note)
         {
             var returnValue = ReturnValue;
 
-            var paramNames = string.Join(", ", new string[]
+            //var paramNames = string.Join(", ", new string[]
+            //{
+            //    "@BankAccountID",
+            //    "@BudgetLineFromID",
+            //    "@BudgetLineToID",
+            //    "@Amount",
+            //    "@Note"
+            //});
+
+            //var messages = await db.Set<Message>()
+            //    .FromSqlProc("dbo.CreateInternalTransfer", returnValue,
+            //        new SqlParameter("@BankAccountID", bankAccountId),
+            //        new SqlParameter("@BudgetLineFromID", budgetLineFromId),
+            //        new SqlParameter("@BudgetLineToID", budgetLineToId),
+            //        new SqlParameter("@Amount", amount),
+            //        new SqlParameter("@Note", note))
+            //    .ToListAsync();
+
+            try
             {
-                "@BankAccountID",
-                "@BudgetLineFromID",
-                "@BudgetLineToID",
-                "@Amount",
-                "@Note"
-            });
 
-            var messages = db.Database.SqlQuery<Message>($"exec @ReturnValue = dbo.CreateInternalTransfer {paramNames}",
-                new SqlParameter("@BankAccountID", bankAccountId),
-                new SqlParameter("@BudgetLineFromID", budgetLineFromId),
-                new SqlParameter("@BudgetLineToID", budgetLineToId),
-                new SqlParameter("@Amount", amount),
-                new SqlParameter("@Note", note),
-                returnValue).ToList();
+                // TODO: reinstate @Note parameter
+                var messages = await db.Set<Message>()
+                    .FromSqlRaw("exec @ReturnValue = dbo.CreateInternalTransfer @BankAccountID, @BudgetLineFromID, @BudgetLineToID, @Amount",
+                        returnValue,
+                        new SqlParameter("@BankAccountID", bankAccountId),
+                        new SqlParameter("@BudgetLineFromID", budgetLineFromId),
+                        new SqlParameter("@BudgetLineToID", budgetLineToId),
+                        new SqlParameter("@Amount", amount)
+                        //new SqlParameter("@Note", note)
+                        )
+                    .ToListAsync();
 
-            isSuccess = returnValue.Value.Equals(0);
+                return (0.Equals(returnValue.Value), messages.Select(m => mapper.Map<T>(m)).ToList());
+            }
+            catch(Exception ex)
+            {
+                return (false, null);
+            }
 
-            return messages.Select(m => Mapper.Map<T>(m)).ToList();
         }
 
-        public void UpdateBudgetLine(int periodId, int budgetLineId, int bankAccountId,
+        public async Task<int> UpdateBudgetLine(int periodId, int budgetLineId, int bankAccountId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount)
         {
-            var allocation = db.Allocations.Single(a =>
+            var allocation = await db.Allocations.SingleAsync(a =>
                 a.PeriodId == periodId && a.BudgetLineId == budgetLineId && a.BankAccountId == bankAccountId);
 
             allocation.PlannedAmount = plannedAmount;
             allocation.AllocatedAmount = allocatedAmount;
             allocation.AccruedAmount = accruedAmount;
 
-            db.SaveChanges();
+            return await db.SaveChangesAsync();
         }
 
-        private List<Message> UpdatePeriodBalances(int periodId, out bool isSuccess, bool skipValidations = false)
+        private async Task<(bool IsSuccess, List<Message> Messages)> UpdatePeriodBalances(int periodId, bool skipValidations = false)
         {
             var returnValue = ReturnValue;
 
             // ensure balances are up to date
-            var messages = db.Database.SqlQuery<Message>("exec @ReturnValue = dbo.UpdatePeriodBalances @PeriodId",
-                new SqlParameter("@PeriodId", periodId),
-                returnValue).ToList();
+            var messages = await db.Set<Message>()
+                .FromSqlRaw("exec @ReturnValue = dbo.UpdatePeriodBalances @PeriodId",
+                    new SqlParameter("@PeriodId", periodId),
+                    returnValue)
+                .ToListAsync();
 
-            isSuccess = returnValue.Value.Equals(0);
-
-            return messages;
+            return (returnValue.Value.Equals(0), messages);
         }
 
         // TODO: change this pattern to accept a partial object and merge it into the existing object
         //       rename the method to MergeTransaction
-        public void UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
+        public async Task<int> UpdateTransaction<T>(int transactionId, string transactionTypeCode, string recipient,
             string notes, List<T> mappedTransactions)
         {
 
             // get the transaction
-            var transaction = db.Transactions.First(t => t.TransactionId == transactionId);
+            var transaction = await db.Transactions
+                .Include(t => t.MappedTransactions)
+                .FirstAsync(t => t.TransactionId == transactionId);
 
             // set the transaction fields
             transaction.TransactionTypeCode = transactionTypeCode;
@@ -280,7 +323,7 @@ namespace BudgetToolsDAL.Accessors
             transaction.IsMapped = true;
 
             // map the incoming data
-            var inData = mappedTransactions.Select(m => Mapper.Map<MappedTransaction>(m)).ToList();
+            var inData = mappedTransactions.Select(m => mapper.Map<MappedTransaction>(m)).ToList();
             var dbData = transaction.MappedTransactions;
 
             // get the mapped transaction record counts
@@ -313,9 +356,34 @@ namespace BudgetToolsDAL.Accessors
                 }
             }
 
-            db.SaveChanges();
+            return await db.SaveChangesAsync();
 
         }
+
+        private async Task DeleteStagedTransactions(int bankAccountId)
+        {
+            await db.Database.ExecuteSqlRawAsync("delete dbo.StagedTransactions where BankAccountId = @BankAccountId;",
+                new SqlParameter("@BankAccountId", bankAccountId));
+        }
+
+        private async Task ImportTransactions(int bankAccountId, bool isSortDesc = true)
+        {
+            await db.Database.ExecuteSqlRawAsync("dbo.uspImportTransactions @BankAccountId", 
+                new SqlParameter("@BankAccountId", bankAccountId),
+                new SqlParameter("@IsSortDesc", isSortDesc));
+        }
+
+        //private async Task<IEnumerable<T>> LookupBudgetLineDefinitions<T>()
+        //{
+        //    db.BudgetLines
+        //}
+
+        //private async Task UpdatePeriodBalances(int PeriodId, bool ClosePeriod)
+        //{
+        //    await db.Database.ExecuteSqlRawAsync("dbo.uspUpdatePeriodBalances @PeriodID, @ClosePeriod",
+        //        new SqlParameter("@PeriodID", PeriodId),
+        //        new SqlParameter("@ClosePeriod", ClosePeriod));
+        //}
 
     }
 

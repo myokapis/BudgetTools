@@ -7,8 +7,8 @@
     });
 
     function bindEvents() {
-        $("#bankAccountId").on("change", changeBankAccount);
-        $("#periodId").on("change", changePeriod);
+        $("#bankAccountId").on("change", changePageScope);
+        $("#periodId").on("change", changePageScope);
         $("#transactions").on("click", "tbody tr", selectRow);
         $("#prev").on("click", prevRow);
         $("#next").on("click", nextRow);
@@ -19,126 +19,88 @@
     }
 
     function amountChanged(event) {
-        var field = $(event.currentTarget);
-        setCurrency(field);
+        let field = $(event.currentTarget);
+        master.setCurrency(field);
         calculateTotals();
     }
 
     function calculateTotals() {
 
-        var total = 0.0;
+        let total = 0.0;
 
         // get the transaction amount
-        var amount = getNumber($('#amount').text());
+        let amount = master.getNumber($('#amount').text());
 
         // get the editor table rows
-        var rows = $('.editor-table tbody').find('tr');
+        let rows = $('.editor-table tbody').find('tr');
 
         // sum the row amounts
-        for (var i = 0; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
             input = $(rows[i]).find('input');
             value = input.val();
-            total += getNumber(input.val());
+            total += master.getNumber(input.val());
         }
 
-        setCurrency("#remainingAmount", amount - total);
+        master.setCurrency("#remainingAmount", amount - total);
     }
 
-    function changeBankAccount() {
-        var data = {
-            bankAccountId: $("#bankAccountId").val()
-        };
-
-        // save the values
-        $.ajax({
-            url: 'Transactions/ChangeBankAccount',
-            type: "POST",
-            data: JSON.stringify(data),
-            dataType: 'json',
-            contentType: 'application/json; charset=utf-8',
-            success: function (data, textStatus, jqXHR) {
+    function changePageScope() {
+        master.postForm("Transactions/ChangePageScope",
+            function (data, textStatus, jqXHR) {
                 $("#transactions > tbody").html(data.transactions);
                 setHeaders();
                 selectFirstRow();
             },
-            error: function (xhr, textStatus, errorThrown) {
+            function (xhr, textStatus, errorThrown) {
                 alert('Error: ' + xhr.statusText);
                 alert(errorThrown);
                 alert(xhr.responseText);
-            }
-        });
-    }
-
-    function changePeriod() {
-
-        var data = {
-            periodId: $("#periodId").val()
-        };
-
-        // save the values
-        $.ajax({
-            url: 'Transactions/ChangePeriod',
-            type: "POST",
-            data: JSON.stringify(data),
-            dataType: 'json',
-            contentType: 'application/json; charset=utf-8',
-            success: function (data) {
-                $("#transactions > tbody").html(data.transactions);
-                //$(".editor-section-div").html(data.editor);
-                setHeaders();
-                selectFirstRow();
-            },
-            error: function (xhr, textStatus, errorThrown) {
-                alert('Error: ' + xhr.statusText);
-                alert(errorThrown);
-                alert(xhr.responseText);
-            }
-        });
+            });
     }
 
     function fillEditor(data) {
 
         // fill the descriptive fields
         $('#transactionId').val(data.transactionId);
-        setCurrency('#amount', Math.abs(data.amount));
+        master.setCurrency('#amount', Math.abs(data.amount));
         $('#amount').attr('data-sign', data.amount < 0.0 ? -1 : 1);
         $('#transactionType').val(data.transactionType);
         $('#recipient').val(data.recipient);
         $('#notes').val(data.notes);
 
         // get the editor table rows
-        var rows = $('.editor-table tbody').find('tr');
+        let rows = $('.editor-table tbody').find('tr');
 
         // get mapped transactions
-        var mapped = data.mappedTransactions;
-        var xactCount = mapped.length;
+        let mapped = data.mappedTransactions;
+        let xactCount = mapped.length;
 
-        for (var i = 0; i < 5; i++) {
+        for (let i = 0; i < 5; i++) {
 
             // get the row and its fields
-            var row = $(rows[i]);
-            var select = $(row).find('select');
-            var input = $(row).find('input');
+            let row = $(rows[i]);
+            let select = $(row).find('select');
+            let input = $(row).find('input');
 
             // set the field values
-            var values = i < xactCount ? mapped[i] : { budgetLineId: 0, amount: 0.0 };
+            let values = i < xactCount ? mapped[i] : { budgetLineId: 0, amount: 0.0 };
             select.val(values.budgetLineId);
-            setCurrency(input, Math.abs(values.amount));
+            master.setCurrency(input, Math.abs(values.amount));
         }
     }
 
     function lineChanged() {
         // check if the transaction is already balanced
-        var remainingAmount = getNumber($("#remainingAmount").text());
+        let remainingAmount = master.getNumber($("#remainingAmount").text());
         if (remainingAmount === 0.0) return;
 
         // get the input field and its value
-        var inputField = $(this).parent().next().find("input")[0];
-        var lineAmount = getNumber($(inputField).val());
+        let inputField = $(this).parent().next().find("input")[0];
+        let lineAmount = master.getNumber($(inputField).val());
         if (lineAmount !== 0.0) return;
 
         // set the amount for this line to the remaining balance
-        setCurrency(inputField, remainingAmount);
+        master.setCurrency(inputField, remainingAmount);
 
         // trigger the change event on the input field
         $(inputField).change();
@@ -147,12 +109,12 @@
     function nextRow() {
 
         // get the transaction id of the current row
-        var transactionId = $('#transactionId').val();
+        let transactionId = $('#transactionId').val();
         if (!transactionId) selectFirstRow();
 
         // get the current row and use it to find the next row
-        var currentRow = $("#transactions [data-id=" + transactionId + "]");
-        var nextRow = $(currentRow).next('tr');
+        let currentRow = $("#transactions [data-id=" + transactionId + "]");
+        let nextRow = $(currentRow).next('tr');
 
         // scroll the next row into focus and click it
         $(nextRow)[0].scrollIntoView();
@@ -163,12 +125,12 @@
     function prevRow() {
 
         // get the transaction id of the current row
-        var transactionId = $('#transactionId').val();
+        let transactionId = $('#transactionId').val();
         if (!transactionId) selectFirstRow();
 
         // get the current row and use it to find the next row
-        var currentRow = $("#transactions [data-id=" + transactionId + "]");
-        var prevRow = $(currentRow).prev('tr');
+        let currentRow = $("#transactions [data-id=" + transactionId + "]");
+        let prevRow = $(currentRow).prev('tr');
 
         // scroll the next row into focus and click it
         $(prevRow)[0].scrollIntoView();
@@ -178,13 +140,13 @@
 
     function saveRow() {
 
-        var budgetLineIds = [];
-        var mapData = [];
+        let budgetLineIds = [];
+        let mapData = [];
 
         // get transaction id, remaining amount, and sign
-        var transactionId = $('#transactionId').val();
-        var remainingAmount = getNumber($('#remainingAmount').text(), null);
-        var sign = Number($('#amount').attr('data-sign'));
+        let transactionId = $('#transactionId').val();
+        let remainingAmount = master.getNumber($('#remainingAmount').text(), null);
+        let sign = Number($('#amount').attr('data-sign'));
 
         // exit if there is no transaction
         if (!transactionId || transactionId <= 0) {
@@ -199,14 +161,14 @@
         }
 
         // gather mapping data
-        var rows = $('.editor-table tbody').find('tr');
+        let rows = $('.editor-table tbody').find('tr');
 
-        for (var i = 0; i < rows.length; i++) {
-            var row = $(rows[i]);
-            var select = $(row.find('select'));
-            var budgetLineId = parseInt(select.val());
-            var input = $(row.find('input'));
-            var amount = getNumber(input.val()) * sign;
+        for (let i = 0; i < rows.length; i++) {
+            let row = $(rows[i]);
+            let select = $(row.find('select'));
+            let budgetLineId = parseInt(select.val());
+            let input = $(row.find('input'));
+            let amount = master.getNumber(input.val()) * sign;
 
             if (amount && (!budgetLineId || (budgetLineId <= 0))) {
                 alert('Each amount must be associated with a budget line.');
@@ -231,31 +193,27 @@
 
         }
 
-        // set main data object
-        var data = {
-            transactionId: transactionId,
-            transactionTypeCode: $('#transactionType option:selected').val(),
-            recipient: $('#recipient').val(),
-            notes: $('#notes').val(),
-            mappedTransactions: mapData
-        };
-
-        // save data
-        $.ajax({
-            url: 'Transactions/UpdateTransaction',
-            type: "POST",
-            data: JSON.stringify(data),
-            contentType: 'application/json; charset=utf-8',
-            success: function (data, textStatus, jqXHR) {
+        master.postForm("Transactions/UpdateTransaction",
+            function (data, textStatus, jqXHR) {
                 setRowAsMapped(transactionId);
                 nextRow();
             },
-            error: function (xhr, textStatus, errorThrown) {
+            function (xhr, textStatus, errorThrown) {
                 alert('Error: ' + xhr.statusText);
                 alert(errorThrown);
                 alert(xhr.responseText);
-            }
-        });
+            },
+            function (formData) {
+                formData.append("transactionId", transactionId);
+                formData.append("transactionTypeCode", $("#transactionType option:selected").val());
+                formData.append("recipient", $("#recipient").val());
+                formData.append("notes", $("#notes").val());
+                //formData.append("mappedTransactions", mapData);
+                //formData.append("mappedTransactions.MappedTransactionId", mapData[0].MappedTransactionId);
+                formData.append("mappedTransactions[0].TransactionId", mapData[0].TransactionId);
+                formData.append("mappedTransactions[0].BudgetLineId", mapData[0].BudgetLineId);
+                formData.append("mappedTransactions[0].Amount", mapData[0].Amount);
+            });
 
     }
 
@@ -263,13 +221,18 @@
         if (event.keyCode !== 13) return;
 
         // if remaining balance is zero then click save button
-        if (getNumber($("#remainingBalance").text()) === 0.0) $("#save").click();
+        if (master.getNumber($("#remainingBalance").text()) === 0.0) $("#save").click();
     }
 
     function selectFirstRow() {
-        var row = $("#transactions tbody tr:first-child");
+        let row = $("#transactions tbody tr:first-child");
 
-        if (row.length === 0) return;
+        if (row.length === 0) {
+            // clear editor if there is no record to load
+            $(".editor-table select").val("");
+            $(".editor-table input[type='text']").val("$0.00");
+            return;
+        };
 
         $(row)[0].scrollIntoView();
         row.click();
@@ -280,37 +243,31 @@
         $(".transaction-row-focus").removeClass("transaction-row-focus");
 
         // set currently selected row
-        var row = $(event.currentTarget);
+        let row = $(event.currentTarget);
         row.find("td").addClass("transaction-row-focus");
 
-        var data = {
-            transactionId: row.attr("data-id")
-        };
-
         // load the transaction for this row
-        $.ajax({
-            url: 'Transactions/GetTransaction',
-            type: "POST",
-            data: JSON.stringify(data),
-            dataType: 'json',
-            contentType: 'application/json; charset=utf-8',
-            success: function (data, textStatus, jqXHR) {
+        master.postForm("Transactions/GetTransaction",
+            function (data, textStatus, jqXHR) {
                 fillEditor(data);
                 calculateTotals();
             },
-            error: function (xhr, textStatus, errorThrown) {
+            function (xhr, textStatus, errorThrown) {
                 alert('Error: ' + xhr.statusText);
                 alert(errorThrown);
                 alert(xhr.responseText);
-            }
-        });
+            },
+            function(formData){
+                formData.append("transactionId", row.attr("data-id"));
+            });
+
     }
 
     function setHeaders() {
-        var dataCells = $("#transactions tbody tr:first-child td");
+        let dataCells = $("#transactions tbody tr:first-child td");
         if (dataCells.length == 0) return;
 
-        var hdrCells = $(".tableheader-div").find("div");
+        let hdrCells = $(".tableheader-div").find("div");
 
         dataCells.each(function (index, dataCell) {
             var width = $(dataCell).outerWidth();

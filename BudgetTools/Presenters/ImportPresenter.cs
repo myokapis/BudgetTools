@@ -1,5 +1,5 @@
 ﻿using System.Linq;
-using BudgetTools.Classes;
+using System.Threading.Tasks;
 using BudgetTools.Models;
 using BudgetToolsBLL.Services;
 using TemplateEngine;
@@ -9,38 +9,41 @@ namespace BudgetTools.Presenters
 
     public interface IImportPresenter
     {
-        string GetPage();
+        Task<string> GetPage(PageScope pageScope);
     }
 
     public class ImportPresenter : MasterPresenter, IImportPresenter
     {
 
-        public ImportPresenter(IBudgetService budgetService, IPageScope pageScope, ITemplateCache templateCache)
+        public ImportPresenter(IBudgetService budgetService, ITemplateCache templateCache) :
+            base(templateCache, budgetService)
         {
-            this.budgetService = budgetService;
-            this.pageScope = pageScope;
-            this.templateCache = templateCache;
-
-            contentWriter = GetTemplateWriter("Import.tpl");
         }
 
-        protected void GetBankAccountRows(ITemplateWriter writer)
+        // TODO: change the bank account and period queries to accept an optional condition
+        protected async Task GetBankAccountRows(ITemplateWriter writer)
         {
-            var data = this.budgetService.GetBankAccounts<BankAccount>().Where(a => a.IsActive);
-            writer.SetMultiSectionFields("ROW", data);
+            var bankAccounts = await budgetService.GetBankAccounts<BankAccount>();
+            writer.SetMultiSectionFields("ROW", bankAccounts.Where(a => a.IsActive));
         }
 
-        public string GetPage()
+        public async Task<string> GetPage(PageScope pageScope)
         {
-            var writer = SetupMasterPage("HEAD", "BODY");
-            writer.SelectProvider("HEAD");
-            writer.AppendSection(true);
+            // setup master page and the content page section providers
+            await SetupWriters("Master.tpl", "Import.tpl");
+            SetupMasterPage("HEAD", "BODY");
 
-            writer.SelectProvider("BODY");
-            GetBankAccountRows(writer);
-            writer.AppendAll();
+            // write head
+            WriteMasterSection("HEAD");
 
-            return writer.GetContent();
+            // write body
+            await WriteMasterSection("BODY", async (writer) =>
+            {
+                writer.SetSectionFields(pageScope, SectionOptions.Set);
+                await GetBankAccountRows(writer);
+            });
+
+            return GetContent();
         }
 
     }

@@ -212,6 +212,16 @@ BEGIN TRY
                 + ', do not match the transaction amount.'
             FROM Summary;
 
+            -- TODO: change this to provide a detailed list of at least the top 10 mismatched transactions
+            -- TODO: simplify this sql
+            ----select t.TransactionId, t.Amount, sum(m.Amount)
+            ----from dbo.Transactions t
+            ----left join dbo.MappedTransactions m on t.TransactionId = m.TransactionId
+            ----where t.TransactionDate >= '2020-01-01'
+            ----and t.TransactionDate <= '2020-01-31'
+            ----group by t.TransactionId, t.Amount;
+            -- TODO: ?join to period table to get the date range directly?
+            -- TODO: change message coding so that primary messages (0, 100, 200, ...) give a category; secondary (101, 102, 201, ...) give details
             WITH
             actuals AS
             (

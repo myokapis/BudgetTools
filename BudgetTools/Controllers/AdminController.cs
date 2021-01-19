@@ -1,4 +1,6 @@
-﻿using System.Web.Mvc;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using BudgetTools.Classes;
 using BudgetTools.Enums;
 using BudgetTools.Presenters;
@@ -10,8 +12,8 @@ namespace BudgetTools.Controllers
     public class AdminController : Controller
     {
 
-        protected IAdminPresenter adminPresenter;
-        protected IBudgetService budgetService;
+        private readonly IAdminPresenter adminPresenter;
+        private readonly IBudgetService budgetService;
 
         public AdminController(IAdminPresenter adminPresenter, IBudgetService budgetService)
         {
@@ -19,59 +21,82 @@ namespace BudgetTools.Controllers
             this.adminPresenter = adminPresenter;
         }
 
-        public void ChangeBankAccount(int bankAccountId)
+        public async Task<ActionResult> CloseCurrentPeriod(PageScope pageScope)
         {
-            (Session["pageScope"] as PageScope).BankAccountId = bankAccountId;
-        }
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
 
-        public ActionResult CloseCurrentPeriod()
-        {
-            var pageScope = Session["pageScope"] as PageScope;
-            var messages = budgetService.CloseCurrentPeriod<Message, PageScope>(ref pageScope);
-            return Content(adminPresenter.GetCloseCurrentPeriodMessages(messages));
-        }
-
-        public ActionResult GetBalanceTransfer()
-        {
-            return Content(adminPresenter.GetBalanceTransfer());
-        }
-
-        public ActionResult GetCloseCurrentPeriod()
-        {
-            return Content(adminPresenter.GetCloseCurrentPeriod());
-        }
-
-        public JsonResult GetTransferBudgetLines(int bankAccountId)
-        {
-            (Session["pageScope"] as PageScope).BankAccountId = bankAccountId;
-
+            var result = await budgetService.CloseCurrentPeriod<PageScope, Message>(pageScope);
+            
             var data = new
             {
-                budgetLinesFrom = adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.From),
-                budgetLinesTo = adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.To)
+                pageScope = result.PageScope,
+                html = await adminPresenter.GetCloseCurrentPeriodMessages(result.Messages)
             };
 
             return Json(data);
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index(PageScope pageScope)
         {
-            return Content(this.adminPresenter.GetPage());
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+            
+            return Content(await adminPresenter.GetPage(pageScope), "text/html");
         }
 
-        public JsonResult SaveTransfer(int bankAccountId, int budgetLineFromId,
+        public async Task<JsonResult> SaveTransfer(PageScope pageScope, int budgetLineFromId,
             int budgetLineToId, decimal amount, string note)
         {
-            var isSuccess = false;
-            var messages = budgetService.SaveTransfer<Message>(bankAccountId, budgetLineFromId,
-                budgetLineToId, amount, note, out isSuccess);
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            var result = await budgetService.SaveTransfer<Message>(pageScope.BankAccountId, budgetLineFromId,
+                budgetLineToId, amount, note);
 
             var data = new
             {
-                isSuccess,
-                messages = adminPresenter.GetSaveTransferMessages(messages),
-                budgetLinesFrom = isSuccess ? adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.From) : "",
-                budgetLinesTo = isSuccess ? adminPresenter.GetTransferBudgetLines(bankAccountId, Direction.To) : ""
+                result.IsSuccess,
+                messages = await adminPresenter.GetSaveTransferMessages(result.Messages),
+                budgetLinesFrom = result.IsSuccess ? await adminPresenter.GetTransferBudgetLines(pageScope, Direction.From) : "",
+                budgetLinesTo = result.IsSuccess ? await adminPresenter.GetTransferBudgetLines(pageScope, Direction.To) : ""
+            };
+
+            return Json(data);
+        }
+
+        public async Task<ActionResult> ShowBalanceTransfer(PageScope pageScope)
+        {
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            var data = new
+            {
+                html = await adminPresenter.GetBalanceTransfer(pageScope)
+            };
+
+            return Json(data);
+        }
+
+        public async Task<ActionResult> ShowCloseCurrentPeriod()
+        {
+            var data = new
+            {
+                html = await adminPresenter.GetCloseCurrentPeriod()
+            };
+
+            return Json(data);
+        }
+
+        public async Task<JsonResult> ShowTransferBudgetLines(PageScope pageScope)
+        {
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            var data = new
+            {
+                budgetLinesFrom = await adminPresenter.GetTransferBudgetLines(pageScope, Direction.From),
+                budgetLinesTo = await adminPresenter.GetTransferBudgetLines(pageScope, Direction.To)
             };
 
             return Json(data);
