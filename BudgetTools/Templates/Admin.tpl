@@ -1,6 +1,6 @@
 ﻿<!-- @@HEAD@@ -->
-<link rel="stylesheet" href="Content/Admin.css" />
-<script type="text/javascript" src="Scripts/App/admin.js"></script>
+<link rel="stylesheet" href="css/Admin.css" />
+<script type="text/javascript" src="js/admin.js"></script>
 <!-- @@HEAD@@ -->
 
 <!-- @@BODY@@ -->
@@ -64,7 +64,7 @@
                 </div>
                 <div class="messages">
                     <div id="actionButtons">
-                        <button id="transfer">Transfer</button>
+                        <button id="transfer" class="actionButtons" disabled="disabled">Transfer</button>
                     </div>
                     <table id="transferMessages">
                         <thead>

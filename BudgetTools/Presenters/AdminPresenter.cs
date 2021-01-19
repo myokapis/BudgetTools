@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using BudgetTools.Classes;
 using BudgetTools.Enums;
 using BudgetTools.Models;
@@ -11,35 +12,30 @@ namespace BudgetTools.Presenters
 
     public interface IAdminPresenter
     {
-        string GetBalanceTransfer();
-        string GetCloseCurrentPeriod();
-        string GetCloseCurrentPeriodMessages(IEnumerable<Message> messages);
-        string GetSaveTransferMessages(IEnumerable<Message> messages);
-        string GetTransferBudgetLines(int bankAccountId, Direction direction);
-        string GetPage();
+        Task<string> GetBalanceTransfer(PageScope pageScope);
+        Task<string> GetCloseCurrentPeriod();
+        Task<string> GetCloseCurrentPeriodMessages(IEnumerable<Message> messages);
+        Task<string> GetSaveTransferMessages(IEnumerable<Message> messages);
+        Task<string> GetTransferBudgetLines(PageScope pageScope, Direction direction);
+        Task<string> GetPage(PageScope pageScope);
     }
 
     public class AdminPresenter : MasterPresenter, IAdminPresenter
     {
 
-        public AdminPresenter(IBudgetService budgetService, IPageScope pageScope, ITemplateCache templateCache,
-            IWebCache webCache)
+        public AdminPresenter(IBudgetService budgetService, ITemplateCache templateCache) : base(templateCache, budgetService)
         {
-            this.budgetService = budgetService;
-            this.pageScope = pageScope;
-            this.templateCache = templateCache;
-            this.webCache = webCache;
-
-            contentWriter = GetTemplateWriter("Admin.tpl");
         }
 
-        public string GetBalanceTransfer()
+        public async Task<string> GetBalanceTransfer(PageScope pageScope)
         {
+            await SetupContentWriter("Admin.tpl");
             var writer = contentWriter.GetWriter("TRANSFER_BALANCE", true);
             var sectionNames = new string[] { "From", "To" };
 
-            var budgetLines =
-                budgetService.GetBudgetLineBalances<BudgetLineBalance>(pageScope.PeriodId, pageScope.BankAccountId)
+            // TODO: allow filter and order by to be passed in
+            var budgetLines = 
+                (await budgetService.GetBudgetLineBalances<BudgetLineBalance>(pageScope.PeriodId, pageScope.BankAccountId))
                 .OrderBy(l => l.BudgetLineName);
 
             // set the From and To sections
@@ -52,58 +48,65 @@ namespace BudgetTools.Presenters
                 writer.AppendSection(true);
             }
 
-            writer.AppendAll();
-            return writer.GetContent();
+            return writer.GetContent(true);
         }
 
-        public string GetCloseCurrentPeriod()
+        public async Task<string> GetCloseCurrentPeriod()
         {
+            await SetupContentWriter("Admin.tpl");
             var writer = contentWriter.GetWriter("CLOSE_PERIOD", true);
-            writer.AppendSection();
-            return writer.GetContent();
+            return writer.GetContent(true);
         }
 
-        public string GetCloseCurrentPeriodMessages(IEnumerable<Message> messages)
+        public async Task<string> GetCloseCurrentPeriodMessages(IEnumerable<Message> messages)
         {
+            await SetupContentWriter("Admin.tpl");
             var writer = contentWriter.GetWriter("MESSAGE", true);
             writer.SetMultiSectionFields(messages);
             return writer.GetContent();
         }
 
-        public string GetPage()
+        public async Task<string> GetPage(PageScope pageScope)
         {
-            var writer = SetupMasterPage("HEAD", "BODY");
-            var selectorWriter = GetTemplateWriter("Common.tpl").GetWriter("SELECTOR");
-            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
+            // setup master page and the content page section providers
+            await SetupWriters("Master.tpl", "Admin.tpl");
+            SetupMasterPage("HEAD", "BODY");
 
-            writer.SelectProvider("HEAD");
-            writer.AppendSection(true);
+            // get common template and register it
+            var tplCommon = await GetTemplateWriter("Common.tpl");
+            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", tplCommon.GetWriter("SELECTOR"));
 
-            writer.SelectProvider("BODY");
-            writer.SelectProvider("SELECTOR");
-            GetSelector(writer);
-            writer.AppendAll();
+            // write head
+            WriteMasterSection("HEAD");
 
-            return writer.GetContent();
+            // write body
+            await WriteMasterSection("BODY", async (writer) =>
+            {
+                await WriteSelector(writer, pageScope);
+            });
+
+            return GetContent();
         }
 
-        public string GetSaveTransferMessages(IEnumerable<Message> messages)
+        public async Task<string> GetSaveTransferMessages(IEnumerable<Message> messages)
         {
+            await SetupContentWriter("Admin.tpl");
             var writer = contentWriter.GetWriter("TRANSFER_MESSAGE", true);
             writer.SetMultiSectionFields(messages);
             return writer.GetContent();
         }
 
-        public string GetTransferBudgetLines(int bankAccountId, Direction direction)
+        public async Task<string> GetTransferBudgetLines(PageScope pageScope, Direction direction)
         {
+            await SetupContentWriter("Admin.tpl");
             var writer = contentWriter.GetWriter("ROW", true);
-            var budgetLines =
-                budgetService.GetBudgetLineBalances<BudgetLineBalance>(pageScope.CurrentPeriodId, bankAccountId)
+
+            var budgetLines = (await budgetService.GetBudgetLineBalances<BudgetLineBalance>(pageScope.CurrentPeriodId, pageScope.BankAccountId))
                 .Where(b => direction == Direction.To || b.Balance > 0m)
                 .OrderBy(l => l.BudgetLineName);
 
             writer.SetMultiSectionFields(budgetLines);
-            return writer.GetContent();
+            return writer.GetContent(true);
         }
 
     }

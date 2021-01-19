@@ -1,18 +1,10 @@
-IF OBJECT_ID('dbo.CreateInternalTransfer', 'P') IS NULL
-    EXEC('CREATE PROCEDURE dbo.CreateInternalTransfer AS SELECT 1;');
-GO
-
-ALTER PROCEDURE dbo.CreateInternalTransfer
+CREATE OR ALTER PROCEDURE dbo.CreateInternalTransfer
     @BankAccountID int,
     @BudgetLineFromID int,
     @BudgetLineToID int,
     @Amount money,
     @Note varchar(1024) = NULL
 AS
-
--- TODO: add mapped transaction records
---       add 'M' period adjustment records
---       exclude internal transfers from the GUI
 
 SET NOCOUNT ON
 
@@ -22,7 +14,7 @@ DECLARE @TransactionDate date;
 DECLARE @AccountChar varchar(10);
 DECLARE @DebitLineChar varchar(10);
 DECLARE @CreditLineChar varchar(10);
-DECLARE @TransactionDateChar char(8);
+DECLARE @TransactionDateChar char(36);
 
 DECLARE @ErrorMessages table
 (
@@ -81,7 +73,7 @@ BEGIN TRY
     SELECT @AccountChar = CAST(@BankAccountID AS varchar);
     SELECT @DebitLineChar = CAST(@BudgetLineFromID AS varchar);
     SELECT @CreditLineChar = CAST(@BudgetLineToID AS varchar);
-    SELECT @TransactionDateChar = CONVERT(char(8), @TransactionDate, 112);
+    SELECT @TransactionDateChar = NEWID();
 
     BEGIN TRANSACTION
 
@@ -110,10 +102,32 @@ BEGIN TRY
     -- add credit mapped transaction
     INSERT INTO dbo.MappedTransactions(TransactionId, BudgetLineId, Amount)
     SELECT SCOPE_IDENTITY(), @BudgetLineToID, @Amount;
-
-    INSERT INTO dbo.PeriodAdjustments(PeriodID, BankAccountID, BudgetLineID, AdjustmentTypeCode, Amount)
-    VALUES(@CurrentPeriodId, @BankAccountID, @BudgetLineFromID, 'M', -@Amount),
-        (@CurrentPeriodId, @BankAccountID, @BudgetLineToID, 'M', @Amount);
+    
+    -- only allow one adjustment of this type per period and bank account
+    WITH
+    CurrentPeriodAdjustments AS
+    (
+        SELECT PeriodID, BankAccountID, BudgetLineID, AdjustmentTypeCode, Amount
+        FROM dbo.PeriodAdjustments
+        WHERE PeriodId = @CurrentPeriodId
+        AND AdjustmentTypeCode = 'M'
+        AND BankAccountId = @BankAccountID
+        AND BudgetLineID IN(@BudgetLineFromID, @BudgetLineToID)
+    ),
+    Adjustments AS
+    (
+        SELECT @BudgetLineFromID AS BudgetLineID, -@Amount AS Amount
+        UNION ALL SELECT @BudgetLineToID, @Amount
+    )
+    MERGE INTO CurrentPeriodAdjustments ca
+    USING Adjustments a
+    ON ca.BudgetLineID = a.BudgetLineID
+    WHEN MATCHED THEN
+        UPDATE
+        SET Amount = ca.Amount + a.Amount
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT(PeriodID, BankAccountID, BudgetLineID, AdjustmentTypeCode, Amount)
+        VALUES(@CurrentPeriodId, @BankAccountID, a.BudgetLineId, 'M', a.Amount);
 
     COMMIT TRANSACTION
 

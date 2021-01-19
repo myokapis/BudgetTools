@@ -14,12 +14,12 @@
 .table-section-div {
     height: 100%;
     overflow: hidden;
-    flex: 4 1 content;
+    flex: 4 1;
     margin-right: 16px;
 }
 
 .editor-section-div {
-    flex: 1 1 content;
+    flex: 1 1;
     height: calc(100% - 32px);
     overflow: hidden;
     background-color: #dddddd;
@@ -37,6 +37,12 @@
     display: flex;
     width: 100%;
     resize: vertical;
+    padding: 0px;
+    box-sizing: border-box;
+    border-width: 2px;
+    border-style: inset;
+    border-color: -internal-light-dark(rgb(118, 118, 118), rgb(133, 133, 133));
+    border-image: initial;
 }
 
 .tableheader-div {
@@ -154,10 +160,13 @@
 
 .editor-button-container {
     display: flex;
+    justify-content: space-between;
     padding-left: 8px;
     padding-top: 8px;
 }
 
 .editor-button-container button {
-
+    width: 80px;
+    height: 20px;
+    text-align: center;
 }

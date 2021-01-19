@@ -4,10 +4,11 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using AutoMapper;
+using BudgetToolsBLL.Models;
 
 namespace BudgetToolsBLL.Services
 {
-
+    //TODO: consider refactoring all of this to add a parse method for each type of parser instead of instantiating a separate class
     public interface IImportService
     {
         IEnumerable<T> ParseStream<T>(Stream stream, ParserConfig parserConfig);
@@ -15,6 +16,12 @@ namespace BudgetToolsBLL.Services
 
     public class ImportService : IImportService
     {
+        ParserFactory parserFactory;
+
+        public ImportService(ParserFactory parserFactory)
+        {
+            this.parserFactory = parserFactory;
+        }
 
         public IEnumerable<T> ParseStream<T>(Stream stream, ParserConfig parserConfig)
         {
@@ -22,7 +29,7 @@ namespace BudgetToolsBLL.Services
             int bankAccountId = parserConfig.BankAccountId;
             var delimiter = new char[] { parserConfig.Delimiter };
             var reader = new StreamReader(stream); // assumes simple ansi file for now
-            var parser = ParserFactory.GetParser(parserConfig.ParserName);
+            var parser = parserFactory.GetParser(parserConfig.ParserName);
 
             while (!reader.EndOfStream)
             {
@@ -74,13 +81,19 @@ namespace BudgetToolsBLL.Services
 
     public class FirstCommunityParser : IParser
     {
+        private readonly IMapper mapper;
         private StringBuilder stringBuilder = new StringBuilder();
+
+        public FirstCommunityParser(IMapper mapper)
+        {
+            this.mapper = mapper;
+        }
 
         public T MapImportRow<T>(int bankAccountId, int rowNo, string[] data)
         {
             var checkNo = GetValue(data[7]);
 
-            var item = new
+            var item = new StagedTransaction
             {
                 Amount = double.Parse(GetValue(data[4], data[5], data[8])),
                 Balance = double.Parse(GetValue(data[6])),
@@ -92,7 +105,7 @@ namespace BudgetToolsBLL.Services
                 TransactionNo = GetValue(data[0])
             };
 
-            return Mapper.Map<T>(item);
+            return mapper.Map<T>(item);
         }
 
         private string GetDescription(string string1, string string2)
@@ -133,19 +146,27 @@ namespace BudgetToolsBLL.Services
         FirstCommunity
     }
 
-    public static class ParserFactory
+    public class ParserFactory
     {
-        private static Dictionary<Parsers, Func<IParser>> parsers = new Dictionary<Parsers, Func<IParser>>
-        {
-            { Parsers.FirstCommunity, () => new FirstCommunityParser() }
-        };
+        private readonly IMapper mapper;
+        private readonly Dictionary<Parsers, Func<IParser>> parsers;
 
-        public static IParser GetParser(Parsers parserKind)
+        public ParserFactory(IMapper mapper)
+        {
+            this.mapper = mapper;
+
+            parsers = new Dictionary<Parsers, Func<IParser>>
+            {
+                { Parsers.FirstCommunity, () => new FirstCommunityParser(mapper) }
+            };
+        }
+
+        public IParser GetParser(Parsers parserKind)
         {
             return parsers[parserKind].Invoke();
         }
 
-        public static IParser GetParser(string parserName)
+        public IParser GetParser(string parserName)
         {
             var parserKind = (Parsers)Enum.Parse(typeof(Parsers), parserName);
             return GetParser(parserKind);

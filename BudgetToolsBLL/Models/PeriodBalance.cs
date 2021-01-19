@@ -13,6 +13,7 @@
         public decimal PreviousBalance { get; set; }
         public decimal Balance { get; set; }
         public decimal ProjectedBalance { get; set; }
+        public int Level { get; set; }
     }
 
 }

@@ -1,6 +1,6 @@
 ﻿<!-- @@HEAD@@ -->
-<link rel="stylesheet" href="Content/Balances.css" />
-<script type="text/javascript" src="Scripts/App/balances.js"></script>
+<link rel="stylesheet" href="css/Balances.css" />
+<script type="text/javascript" src="js/balances.js"></script>
 <!-- @@HEAD@@ -->
 
 <!-- @@BODY@@ -->

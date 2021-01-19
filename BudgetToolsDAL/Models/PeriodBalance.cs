@@ -1,18 +1,20 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BudgetToolsDAL.Models
 {
 
+    [Table("vwPeriodBalances", Schema = "dbo")]
     public class PeriodBalance
     {
-        [Key, Column(Order=0)]
+        [Key, Column("PeriodID", Order=0)]
         public int PeriodId { get; set; }
 
-        [Key, Column(Order = 1)]
+        [Key, Column("BankAccountID", Order = 1)]
         public int BankAccountId { get; set; }
 
-        [Key, Column(Order = 2)]
+        [Key, Column("BudgetLineID", Order = 2)]
         public int BudgetLineId { get; set; }
 
         public string BankAccountName { get; set; }

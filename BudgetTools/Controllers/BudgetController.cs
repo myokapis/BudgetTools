@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Web.Mvc;
-using BudgetTools.Classes;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using BudgetTools.Models;
 using BudgetTools.Presenters;
 using BudgetToolsBLL.Services;
 
@@ -9,8 +10,8 @@ namespace BudgetTools.Controllers
 
     public class BudgetController : Controller
     {
-        protected IBudgetPresenter budgetPresenter;
-        protected IBudgetService budgetService;
+        private readonly IBudgetPresenter budgetPresenter;
+        private readonly IBudgetService budgetService;
 
         public BudgetController(IBudgetPresenter budgetPresenter, IBudgetService budgetService)
         {
@@ -18,32 +19,39 @@ namespace BudgetTools.Controllers
             this.budgetService = budgetService;
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index(PageScope pageScope)
         {
-            return Content(budgetPresenter.GetPage());
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
+
+            return Content(await budgetPresenter.GetPage(pageScope), "text/html");
         }
 
-        public ActionResult ChangeBankAccount(int bankAccountId)
+        public async Task<ActionResult> ChangePageScope(PageScope pageScope)
         {
-            IPageScope pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            pageScope.BankAccountId = bankAccountId;
+            if (!ModelState.IsValid)
+                pageScope = await budgetService.GetPageScope<PageScope>();
 
-            return Content(budgetPresenter.GetTransactionRows());
+            var data = new
+            {
+                html = await budgetPresenter.GetTransactionRows(pageScope)
+            };
+
+            return Json(data);
         }
 
-        public ActionResult ChangePeriod(int periodId)
-        {
-            IPageScope pageScope = (IPageScope)this.Session.Contents["pageScope"];
-            pageScope.PeriodId = periodId;
-
-            return Content(budgetPresenter.GetTransactionRows());
-        }
-
-        public void SaveBudgetLine(int periodId, int budgetLineId, int bankAccountId,
+        // TODO: return json with success or failure and message
+        public async Task<ActionResult> SaveBudgetLine(PageScope pageScope, int budgetLineId,
             decimal plannedAmount, decimal allocatedAmount, decimal accruedAmount)
         {
-            budgetService.SaveBudgetLine(periodId, budgetLineId, bankAccountId,
+
+            if (!ModelState.IsValid)
+                throw new Exception();
+
+            await budgetService.SaveBudgetLine(pageScope.PeriodId, budgetLineId, pageScope.BankAccountId,
                 plannedAmount, allocatedAmount, accruedAmount);
+
+            return Json(new { });
         }
 
     }

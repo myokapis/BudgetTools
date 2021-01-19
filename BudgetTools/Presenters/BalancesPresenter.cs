@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using BudgetTools.Classes;
 using BudgetTools.Models;
 using BudgetToolsBLL.Services;
@@ -9,56 +10,55 @@ namespace BudgetTools.Presenters
 
     public interface IBalancesPresenter
     {
-        string GetPage();
-        string GetTransactionRows();
+        Task<string> GetPage(PageScope pageScope);
+        Task<string> GetTransactionRows(int periodId);
     }
 
     public class BalancesPresenter : MasterPresenter, IBalancesPresenter
     {
 
-        public BalancesPresenter(IBudgetService budgetService, IPageScope pageScope, ITemplateCache templateCache)
-        {
-            this.budgetService = budgetService;
-            this.pageScope = pageScope;
-            this.templateCache = templateCache;
+        public BalancesPresenter(IBudgetService budgetService, ITemplateCache templateCache) : base(templateCache, budgetService)
+        { }
 
-            contentWriter = GetTemplateWriter("Balances.tpl");
-        }
-
-        public string GetPage()
+        public async Task<string> GetPage(PageScope pageScope)
         {
             // setup master page and the content page section providers
-            var writer = SetupMasterPage("HEAD", "BODY");
-            var selectorWriter = GetTemplateWriter("Common.tpl").GetWriter("SELECTOR");
-            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", selectorWriter);
+            await SetupWriters("Master.tpl", "Balances.tpl");
+            SetupMasterPage("HEAD", "BODY");
 
-            writer.SelectProvider("HEAD");
-            writer.AppendSection(true);
+            // get common template and register it
+            var tplCommon = await GetTemplateWriter("Common.tpl");
+            contentWriter.RegisterFieldProvider("BODY", "SELECTOR", tplCommon.GetWriter("SELECTOR"));
 
-            writer.SelectProvider("BODY");
-            writer.SelectProvider("SELECTOR");
-            GetSelector(writer);
-            writer.SelectSection("CONTENT");
-            GetTransactionRows(writer);
-            writer.DeselectSection();
-            writer.AppendAll();
+            // write head
+            WriteMasterSection("HEAD");
 
-            return writer.GetContent();
+            // write body
+            await WriteMasterSection("BODY", async (writer) =>
+            {
+                await WriteSelector(writer, pageScope);
+                writer.SelectSection("CONTENT");
+                await GetTransactionRows(pageScope.PeriodId, writer);
+                //writer.DeselectSection();
+            });
+
+            return GetContent();
         }
 
-        public string GetTransactionRows()
+        public async Task<string> GetTransactionRows(int periodId)
         {
+            await SetupContentWriter("Balances.tpl");
             var writer = contentWriter.GetWriter("CONTENT", true);
-            GetTransactionRows(writer);
+            await GetTransactionRows(periodId, writer);
+            writer.AppendAll(); // added this
             return writer.GetContent();
         }
 
-        private void GetTransactionRows(ITemplateWriter writer = null)
+        private async Task GetTransactionRows(int periodId, ITemplateWriter writer = null)
         {
 
             // get budget records for the period
-            var records = this.budgetService
-                .GetPeriodBalancesWithSummary<PeriodBalance>(this.pageScope.PeriodId);
+            var records = await budgetService.GetPeriodBalancesWithSummary<PeriodBalance>(periodId);
 
             var grandTotal = records.FirstOrDefault(r => r.Level == 0) ?? new PeriodBalance
             {
@@ -74,18 +74,17 @@ namespace BudgetTools.Presenters
 
             writer.SelectSection("ALL_ACCOUNTS");
             writer.SetSectionFields(grandTotal, SectionOptions.AppendDeselect);
-            writer.SelectSection("ROWS");
 
             foreach (var record in details)
             {
+                writer.SelectSection("ROWS");
                 var sectionName = record.Level == 1 ? "ROW_S" : "ROW_D";
                 writer.SetSectionFields(sectionName, record, SectionOptions.AppendDeselect);
                 writer.AppendSection(true);
-                writer.SelectSection("ROWS");
             }
 
-            writer.DeselectSection();
-            writer.AppendSection();
+            //writer.DeselectSection();
+            //writer.AppendSection();
         }
 
     }

@@ -1,8 +1,11 @@
-﻿using TemplateEngine.Formats;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using TemplateEngine.Formats;
 
 namespace BudgetTools.Models
 {
 
+    [Table("vwPeriodBalances")]
     public class PeriodBalance
     {
         public int PeriodId { get; set; }

@@ -1,60 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web.Caching;
-using TemplateEngine;
-using BudgetToolsBLL.Services;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+////using System.Web.Caching;
+//using TemplateEngine;
+//using BudgetToolsBLL.Services;
 
 // TODO: look at using memory cache and instantiate it as part of app startup
+// TODO: lookup and cache the needed items on app start; cache should be told how to get items rather than do the getting
 
-namespace BudgetTools.Classes
-{
+//namespace BudgetTools.Classes
+//{
 
-    public interface IWebCache
-    {
-        FieldDefinitions BudgetLineDefinitions();
-    }
+//    public interface IWebCache
+//    {
+//        FieldDefinitions BudgetLineDefinitions();
+//    }
 
-    public sealed class WebCache : IWebCache
-    {
-        private IBudgetService budgetService;
-        private Cache cache;
-        private int defaultExpirationMinutes = 5;
+//    public sealed class WebCache : IWebCache
+//    {
+        //private IBudgetService budgetService;
+        //private Cache cache;
+        //private int defaultExpirationMinutes = 5;
 
-        public WebCache(Cache cache, IBudgetService budgetService)
-        {
-            this.budgetService = budgetService;
-            this.cache = cache;
-        }
+        //public WebCache(Cache cache, IBudgetService budgetService)
+        //{
+        //    //this.budgetService = budgetService;
+        //    this.cache = cache;
+        //}
 
-        public FieldDefinitions BudgetLineDefinitions()
-        {
+        //public FieldDefinitions BudgetLineDefinitions()
+        //{
 
-            // lookup the cached item
-            var key = "budgetLineDefinitions";
-            var definitions = this.cache[key] as FieldDefinitions;
+        //    // lookup the cached item
+        //    var key = "budgetLineDefinitions";
+        //    var definitions = this.cache[key] as FieldDefinitions;
 
-            if (definitions == null)
-            {
-                // get the current active budget lines
-                var budgetLines = new List<Option>() { new Option() { Text = "", Value = "0" } };
-                budgetLines.AddRange(budgetService.GetBudgetLineSet<Option>().OrderBy(o => o.Text));
+        //    if (definitions == null)
+        //    {
+        //        // get the current active budget lines
+        //        var budgetLines = new List<Option>() { new Option() { Text = "", Value = "0" } };
+        //        budgetLines.AddRange(budgetService.GetBudgetLineSet<Option>().OrderBy(o => o.Text));
 
-                // set up the dropdown definition
-                var dropdown = new DropdownDefinition("BUDGET_LINES", "BudgetLineId", budgetLines);
+        //        // set up the dropdown definition
+        //        var dropdown = new DropdownDefinition("BUDGET_LINES", "BudgetLineId", budgetLines);
 
-                definitions = new FieldDefinitions();
-                definitions.SetDropdowns(dropdown);
+        //        definitions = new FieldDefinitions();
+        //        definitions.SetDropdowns(dropdown);
 
-                // cache the created item
-                var expiration = DateTime.Now.AddMinutes(defaultExpirationMinutes);
-                cache.Insert(key, definitions, null, expiration, Cache.NoSlidingExpiration);
-            }
+        //        // cache the created item
+        //        var expiration = DateTime.Now.AddMinutes(defaultExpirationMinutes);
+        //        cache.Insert(key, definitions, null, expiration, Cache.NoSlidingExpiration);
+        //    }
 
-            return definitions;
-            
-        }
+        //    return definitions;
 
-    }
+        //}
 
-}
+//    }
+
+//}
