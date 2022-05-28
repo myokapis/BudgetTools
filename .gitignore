@@ -252,3 +252,4 @@ paket-files/
 *.sln.iml
 /BudgetTools/temp
 /_Requirements
+**/Properties/launchSettings.json
