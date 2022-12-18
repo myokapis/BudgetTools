@@ -139,7 +139,6 @@
     }
 
     function saveRow() {
-
         let budgetLineIds = [];
         let mapData = [];
 
@@ -208,13 +207,25 @@
                 formData.append("transactionTypeCode", $("#transactionType option:selected").val());
                 formData.append("recipient", $("#recipient").val());
                 formData.append("notes", $("#notes").val());
-                //formData.append("mappedTransactions", mapData);
-                //formData.append("mappedTransactions.MappedTransactionId", mapData[0].MappedTransactionId);
-                formData.append("mappedTransactions[0].TransactionId", mapData[0].TransactionId);
-                formData.append("mappedTransactions[0].BudgetLineId", mapData[0].BudgetLineId);
-                formData.append("mappedTransactions[0].Amount", mapData[0].Amount);
-            });
 
+                for (i = 0; i < mapData.length; i++) {
+                    console.debug('i: ' + i.toString());
+                    formData.append(`mappedTransactions[${i}].MappedTransactionId`, mapData[i].MappedTransactionId);
+                    formData.append(`mappedTransactions[${i}].TransactionId`, mapData[i].TransactionId);
+                    formData.append(`mappedTransactions[${i}].BudgetLineId`, mapData[i].BudgetLineId);
+                    formData.append(`mappedTransactions[${i}].Amount`, mapData[i].Amount);
+                }
+                //formData.append("mappedTransactions", mapData);
+                //formData.append("mappedTransactions[0].MappedTransactionId", mapData[0].MappedTransactionId);
+                //formData.append("mappedTransactions[0].TransactionId", mapData[0].TransactionId);
+                //formData.append("mappedTransactions[0].BudgetLineId", mapData[0].BudgetLineId);
+                //formData.append("mappedTransactions[0].Amount", mapData[0].Amount);
+
+                //formData.append("mappedTransactions[1].MappedTransactionId", mapData[1].MappedTransactionId);
+                //formData.append("mappedTransactions[1].TransactionId", mapData[1].TransactionId);
+                //formData.append("mappedTransactions[1].BudgetLineId", mapData[1].BudgetLineId);
+                //formData.append("mappedTransactions[1].Amount", mapData[1].Amount);
+                });
     }
 
     function seekEnterKey(event) {

@@ -84,11 +84,14 @@ namespace BudgetToolsDAL.Accessors
             // attempt to close the period
             var returnValue = ReturnValue;
 
-            var messages = await db.Set<Message>()
+            var messageQuery = db.Set<Message>()
                 .FromSqlRaw("exec @ReturnValue = dbo.CloseCurrentPeriod", returnValue)
                 .AsNoTracking()
+                .AsEnumerable();
+
+            var messages = messageQuery
                 .Select(m => mapper.Map<T>(m))
-                .ToListAsync();
+                .ToList();
 
             return (returnValue.Value.Equals(0), messages);
         }

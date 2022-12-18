@@ -100,7 +100,7 @@
         let totals = Array(7).fill(0.0); //[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let summaryHeaders = $("[data-type='summary']");
 
-        for let (i = 0; i < summaryHeaders.length; i++) {
+        for (let i = 0; i < summaryHeaders.length; i++) {
             let amounts = $(summaryHeaders[i]).find("td");
 
             for (let j = 0; j < 7; j++) {
@@ -163,7 +163,7 @@
             this.cellValues[4] = this.cellValues[1] - this.cellValues[3] + remAdj;
 
             // update the cell text
-            for (let var i = 0; i < 7; i++) {
+            for (let i = 0; i < 7; i++) {
                 if (i === 3 || i === 5) continue;
                 master.setCurrency(this.cells[i], this.cellValues[i]);
             }

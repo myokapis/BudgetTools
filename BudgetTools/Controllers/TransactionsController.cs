@@ -68,7 +68,7 @@ namespace BudgetTools.Controllers
             return Json(data);
         }
 
-        public async Task<JsonResult> UpdateTransaction(int transactionId, string transactionTypeCode, string recipient,
+        public async Task<JsonResult> UpdateTransaction([FromForm]int transactionId, string transactionTypeCode, string recipient,
             string notes, List<MappedTransaction> mappedTransactions)
         {
             //var mappedTransactions = new List<MappedTransaction> { mappedTransaction };

@@ -7,11 +7,11 @@ BEGIN TRY
   SELECT @BackupName = DB_NAME() + '_' + @DateString + '.bak'
   SELECT @BackupLogName = DB_NAME() + 'Log_' + @DateString + '.bak'
 
-  EXEC dbo.BackupDatabase 'BudgetTools', 'C:\Users\Gene\Documents\Finances\Backups', @BackupName
+  EXEC dbo.BackupDatabase 'BudgetTools', 'C:\Users\busin\Documents\Finances\Backups', @BackupName
 
   ----EXEC dbo.BackupDatabaseLog 'Finances', 'C:\Workspace\Finances\Backups', @BackupLogName
   	
-  EXEC dbo.VerifyBackup 'BudgetTools', 'C:\Users\Gene\Documents\Finances\Backups', @BackupName
+  EXEC dbo.VerifyBackup 'BudgetTools', 'C:\Users\busin\Documents\Finances\Backups', @BackupName
 
   ----EXEC dbo.VerifyBackup 'Finances', 'C:\Workspace\Finances\Backups', @BackupLogName
 

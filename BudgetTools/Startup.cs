@@ -40,7 +40,7 @@ namespace BudgetTools
             // setup database contexts
             services.AddDbContextPool<BudgetToolsDBContext>(options =>
                 {
-                    options.UseSqlServer(Configuration.GetConnectionString("Default"), options => options.EnableRetryOnFailure(5));
+                    options.UseSqlServer(Configuration.GetConnectionString("Default"));
                     options.EnableDetailedErrors();
                 }); // TODO: make this match the config
 
